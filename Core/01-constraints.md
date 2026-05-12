@@ -1,6 +1,6 @@
 # Project Constraints & Context
 
-**Version:** v0.5 (locked — supersedes v0.4)
+**Version:** v0.6 (locked — supersedes v0.5)
 **Last updated:** 2026-05-12
 **Status:** Phase 0 complete.
 
@@ -130,7 +130,8 @@ RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with 
 - Closed-loop control law driving servo-actuated aerodynamic control surfaces
 - Sensor health monitoring and fault detection logic
 - Graceful degradation under sensor compromise
-- Telemetry downlink to Pi 5 ground station
+- Bidirectional telemetry link between MCU and Pi 5 ground station. Downlink: sensor data, estimator state, sensor health. Uplink: mode commands from ground station to MCU.
+- **Demo/flight mode toggle** — ground station can command the MCU between flight mode (real deflection limits) and demo mode (relaxed deflection limits for presentation legibility). MCU acknowledges all mode commands; ground station reflects active mode and acknowledgment status.
 - **Live ground station UI** running on the Pi 5 (1024×600 touch display, or external monitor). Multi-pane dashboard showing: live telemetry charts, sensor health status and confidence indicators, the system's own estimate of data accuracy and veracity, a real-time 3D attitude visualization of the rocket body driven by the estimator output, and a separate zoomed view of the fin assembly showing actuated control surface deflections as they occur.
 - High-fidelity simulation of vehicle in hypothetical flight
 - Post-test analysis tooling (Python, on dev machine)
@@ -202,6 +203,7 @@ These are unresolved. They'll be answered when the project reaches them.
 3. **Specific telemetry band and module.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
 4. **Airframe presence question.** Open whether the test stand uses a real commercial airframe or a pure avionics test rig.
 5. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 3). Defer until simulation scope is defined.
+6. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
 
 ---
 
@@ -212,3 +214,4 @@ These are unresolved. They'll be answered when the project reaches them.
 - **v0.3** (2026-05-12): Public-facing reframe — mission statement depersonalized, stakeholder framing neutralized (§2 renamed to Intended Audiences), §9 renamed to Engineering Quality Rubric, JPL Power of 10 added as §10.6.
 - **v0.4** (2026-05-12): Scope update — SD card onboard logging removed (Pi 5 handles all logging over telemetry); ground station UI description expanded to reflect multi-pane dashboard with 3D attitude visualization and fin deflection view.
 - **v0.5** (2026-05-12): Open questions reframed as timeless (removed phase-gate language); NASA-STD-7009 added as a deferred candidate for simulation validation.
+- **v0.6** (2026-05-12): Telemetry link made bidirectional; demo/flight mode toggle added to scope (D020); true C2 depth added as stretch open question.
