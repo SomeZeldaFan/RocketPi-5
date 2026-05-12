@@ -2,40 +2,40 @@
 
 **Last updated:** 2026-05-12
 
-This document is the project's snapshot. It changes constantly — ideally at the end of every work session. Its job is to let you (or anyone) reconstruct project state in 60 seconds.
-
-Keep it short. One page max. If it's longer than one page, the older content goes in the lab notebook, not here.
+Live project status. Updated at the end of every work session.
 
 ---
 
 ## Where we are
 
-**Phase:** Phase 0 (requirements scoping) — nearly complete. Awaiting v0.3 lock of constraints document.
+**Phase:** Phase 0 complete. Phase 1 (requirements + architecture) not yet started.
 
+**Constraints doc:** v0.7 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
 **Depth axis:** Locked — fault-tolerant graceful degradation under sensor compromise.
 **Flight:** Excluded.
 
-Nothing has been built yet. Pi 5 kit is physically on hand, unboxed/unconfigured status unknown.
+Nothing has been built yet. Pi 5 kit is physically on hand, not yet configured.
 
 ---
 
 ## What's done
 
-- Phase 0 scoping conversation completed.
-- v0.2 of constraints document drafted.
-- Decisions log populated retroactively with Phase 0 decisions.
-- Document architecture defined and skeleton files created.
+- Phase 0 complete — project shape, depth axis, scope, and principles all locked.
+- Constraints document locked at v0.7.
+- Decisions log populated: D001–D021.
+- Coding standard locked: NASA JPL Power of 10.
+- Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
 
 ## What's in progress
 
-- Review of v0.2 constraints doc → lock as v0.3.
+Nothing active. Between Phase 0 and Phase 1.
 
 ## What's blocked
 
-Nothing currently blocked.
+Nothing blocked.
 
-## Next 1–3 concrete tasks
+## Next concrete tasks
 
-1. **Review v0.2 constraints document.** Read carefully. Push back on anything that doesn't match what was decided in Phase 0. Iterate to v0.3. (Estimated: 30 minutes including reading + reaction.)
-2. **Pi 5 bring-up (next chat).** Install OS, establish SSH access, verify GPIO and camera enumerate, run a "hello world" hardware interaction (LED blink or sensor read from starter kit).
+1. **Pi 5 bring-up (Thursday).** DietPi install, SSH access, GPIO and camera verification, hello-world hardware interaction.
+2. **Open Phase 1.** Begin requirements doc (Core/04-requirements.md) — functional and non-functional requirements, fault tolerance requirements baked in from the start.
