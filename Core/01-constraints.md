@@ -8,7 +8,7 @@
 
 ## 1. Mission Need
 
-Build a first hardware project, in the aerospace domain, of sufficient depth and polish that it stands out among the work of peers and is presentable to future aerospace faculty as evidence of capability — given a Raspberry Pi 5 kit as the starting point and a 16-week window (May–August 2026).
+Build a first hardware project, in the aerospace domain, of sufficient depth and polish that it stands out among the work of peers and is presentable to future aerospace faculty as evidence of capability — given a Raspberry Pi 5 kit as the starting point and a 16-week window (May–July 2026).
 
 This is a *founding statement*, not a specification. Specifications are downstream.
 
@@ -17,7 +17,7 @@ This is a *founding statement*, not a specification. Specifications are downstre
 ## 2. Stakeholders & Audiences
 
 - **Primary judge:** future aerospace professors (audience not yet met; taste is inferred, not known).
-- **Secondary judge:** current ISET (software engineering) professor who issued the kit and expects a deliverable in August.
+- **Secondary judge:** current ISET (software engineering) professor who issued the kit and expects a deliverable in July.
 - **Tertiary judge:** peers in current program.
 - **Industry gateway aspiration:** UAE aerospace and defense employers (HALCON, EDGE, others) for whom the artifact could serve as evidence of capability.
 - **Self:** the builder, whose technical growth and genuine interest are themselves outcomes of the project.
@@ -49,11 +49,11 @@ Additional sensors, microcontrollers, flight controllers, RF modules, mounting s
 
 ### 3.5 Budget
 
-Soft ceiling **~$2,500 USD** across the project lifetime (excluding tools listed in 3.2). Contributions from monthly stipend (~$1,000/month available) plus possible family contribution. Not a hard cap; specific expenditures justified case-by-case.
+Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed in 3.2). Contributions from monthly stipend (~AED1,000/month available) plus possible family contribution. Not a hard cap; specific expenditures justified case-by-case.
 
 ### 3.6 Time
 
-**~16 weeks calendar** (May 11 – end of August 2026).
+**~16 weeks calendar** (May 11 – end of July 2026).
 
 Estimated total work budget: **~400 hours** (350–450 conservative range).
 
@@ -65,7 +65,7 @@ This is *not* a casual side-project budget. It places ambitious work within reac
 
 ### 3.7 Workspace
 
-- **Primary:** home (Abu Dhabi).
+- **Primary:** home.
 - **Outdoor:** available.
 - **Institutional:** Polytechnic labs potentially accessible (3D printing, CNC, electronics test equipment) via managing director. *Action: pursue formal access for project endorsement and lab use.*
 
@@ -109,7 +109,7 @@ This direction is selected because:
 
 ---
 
-## 6. Demos (deliverables for August presentation)
+## 6. Demos (deliverables for July presentation)
 
 ### Demo 1 — Live bench demo (PRIMARY)
 
