@@ -1,28 +1,27 @@
 # Project Constraints & Context
 
-**Version:** v0.2 (draft for review — supersedes v0.1)
+**Version:** v0.3 (locked — supersedes v0.2)
 **Last updated:** 2026-05-12
-**Status:** Phase 0 nearly complete. Locks at v0.3 after review.
+**Status:** Phase 0 complete.
 
 ---
 
 ## 1. Mission Need
 
-Build a first hardware project, in the aerospace domain, of sufficient depth and polish that it stands out among the work of peers and is presentable to future aerospace faculty as evidence of capability — given a Raspberry Pi 5 kit as the starting point and a 16-week window (May–July 2026).
+Design, build, and validate a bench-top model rocketry GNC (Guidance, Navigation, and Control) suite demonstrating closed-loop attitude control with fault-tolerant sensor fusion under deliberate sensor compromise — within a 16-week window (May–July 2026) using a Raspberry Pi 5 as the development and ground station platform.
 
 This is a *founding statement*, not a specification. Specifications are downstream.
 
 ---
 
-## 2. Stakeholders & Audiences
+## 2. Intended Audiences
 
-- **Primary judge:** future aerospace professors (audience not yet met; taste is inferred, not known).
-- **Secondary judge:** current ISET (software engineering) professor who issued the kit and expects a deliverable in July.
-- **Tertiary judge:** peers in current program.
-- **Industry gateway aspiration:** UAE aerospace and defense employers (HALCON, EDGE, others) for whom the artifact could serve as evidence of capability.
-- **Self:** the builder, whose technical growth and genuine interest are themselves outcomes of the project.
+- **Aerospace engineering faculty** — the primary technical audience. The project engages real aerospace subdisciplines (GNC, FDIR) and must hold up to domain scrutiny.
+- **Current program professor** — issued the Pi 5 kit; expects a completed deliverable by July 2026. Scope and documentation must be legible to a software engineering background.
+- **UAE aerospace and defense industry** — secondary audience for whom fault-tolerant GNC and GPS-denied operation analogues are directly relevant.
+- **The builder** — technical growth and genuine understanding are first-class outcomes, not side effects.
 
-**Implication:** the project must read as serious to someone who knows aerospace, not merely as "impressive hardware project for a software student." This raises the bar on domain authenticity — the project must engage with at least one genuine aerospace concern, not be a generic embedded project with an aerospace skin.
+**Implication:** the project engages at least one genuine aerospace concern at depth, not as a cosmetic framing over a generic embedded project. Domain authenticity is non-negotiable.
 
 ---
 
@@ -153,14 +152,14 @@ RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with 
 
 ---
 
-## 9. Definition of "Impressive" (Operational Rubric)
+## 9. Engineering Quality Rubric
 
-Candidate scope additions and design decisions are scored against the following criteria. This is the rubric — re-read before any meaningful scope decision.
+Candidate scope additions and design decisions are evaluated against the following criteria. Re-read before any meaningful scope decision.
 
 1. **Domain authenticity** — engages a real aerospace problem, not cosmetically. Fault-tolerant estimation is the project's primary authenticity claim.
 2. **Technical depth** — at least one component requiring genuine learning beyond tutorial-level. The sensor fusion + fault detection pipeline carries this.
 3. **Systems integration** — multiple subsystems with real interfaces. IMU, MCU, servos, telemetry radio, ground station, simulation — all must compose.
-4. **Documentation & rigor** — written up as if for review. Requirements traced, decisions justified, results measured. *This is the cheapest multiplier for perceived seriousness.*
+4. **Documentation & rigor** — written up as if for review. Requirements traced, decisions justified, results measured.
 5. **Demonstrability** — non-builder can appreciate the result in under five minutes (Demo 1 satisfies this).
 6. **Originality of choice, not invention** — the specific framing (bench-only, fault-tolerant, GNC-focused, defense-adjacent) is uncommon. Not novel research; genuinely uncommon at student level.
 7. **Slog-to-learning ratio** — concepts and tasks should be net learning-dense. Mechanical tedium is acceptable when budgeted; uncharacterized tedium is a planning failure.
@@ -189,17 +188,20 @@ The trade space is bounded by what can actually be acquired in the UAE on this t
 
 When regulatory questions arise, the regulator (or its published rules) is the source of truth — not inference, not e-commerce restrictions, not forum posts. (Pattern established when contacting GCAA early in Phase 0.)
 
+### 10.6 JPL Power of 10 coding standard
+
+All control-path and flight-critical code abides by the NASA JPL Power of 10 rules. This is a non-negotiable quality floor, not a stretch goal.
+
 ---
 
 ## 11. Open Questions
 
 These are unresolved and need attention in Phase 1 or before:
 
-1. **Math background not fully characterized.** Linear algebra, probability, calculus comfort levels remain undocumented. Will shape how heavily we lean on Kalman-family estimators vs. simpler complementary filters as the baseline.
-2. **Specific microcontroller choice deferred to Phase 1.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns.
-3. **Specific IMU and barometer selection deferred to Phase 1.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work).
-4. **Specific telemetry band and module deferred to Phase 1.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
-5. **Airframe presence question.** Open whether the test stand uses a real commercial airframe with motor mounted (more realistic, harder to fixture, requires commercial motor procurement which we've now flagged as restricted) or whether it's an avionics test rig that doesn't require an airframe at all. Decide in Phase 1.
+1. **Specific microcontroller choice deferred to Phase 1.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns.
+2. **Specific IMU and barometer selection deferred to Phase 1.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work).
+3. **Specific telemetry band and module deferred to Phase 1.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
+4. **Airframe presence question.** Open whether the test stand uses a real commercial airframe or a pure avionics test rig. Decide in Phase 1.
 
 ---
 
@@ -207,4 +209,4 @@ These are unresolved and need attention in Phase 1 or before:
 
 - **v0.1** (2026-05-11): Initial strawman. Time budget estimated at 128 hours (incorrect — based on misread of "3 hours per week"). No domain locked.
 - **v0.2** (2026-05-11): Time budget corrected to ~400 hours. Domain locked (model rocketry). Project shape locked (bench-only, GNC-focused, avionics-centric). Depth axis locked (fault-tolerant graceful degradation). Flight excluded. Demos redefined. Scope inclusions and exclusions enumerated. Locked principles enumerated. Open questions surfaced.
-- **v0.3** (pending): Lock after review.
+- **v0.3** (2026-05-12): Public-facing reframe — mission statement depersonalized, stakeholder framing neutralized (§2 renamed to Intended Audiences), §9 renamed to Engineering Quality Rubric, JPL Power of 10 added as §10.6.
