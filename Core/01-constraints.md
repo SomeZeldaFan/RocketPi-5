@@ -1,6 +1,6 @@
 # Project Constraints & Context
 
-**Version:** v0.4 (locked — supersedes v0.3)
+**Version:** v0.5 (locked — supersedes v0.4)
 **Last updated:** 2026-05-12
 **Status:** Phase 0 complete.
 
@@ -195,12 +195,13 @@ All control-path and flight-critical code abides by the NASA JPL Power of 10 rul
 
 ## 11. Open Questions
 
-These are unresolved and need attention in Phase 1 or before:
+These are unresolved. They'll be answered when the project reaches them.
 
-1. **Specific microcontroller choice deferred to Phase 1.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns.
-2. **Specific IMU and barometer selection deferred to Phase 1.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work).
-3. **Specific telemetry band and module deferred to Phase 1.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
-4. **Airframe presence question.** Open whether the test stand uses a real commercial airframe or a pure avionics test rig. Decide in Phase 1.
+1. **Specific microcontroller choice.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns.
+2. **Specific IMU and barometer selection.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work).
+3. **Specific telemetry band and module.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
+4. **Airframe presence question.** Open whether the test stand uses a real commercial airframe or a pure avionics test rig.
+5. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 3). Defer until simulation scope is defined.
 
 ---
 
@@ -210,3 +211,4 @@ These are unresolved and need attention in Phase 1 or before:
 - **v0.2** (2026-05-11): Time budget corrected to ~400 hours. Domain locked (model rocketry). Project shape locked (bench-only, GNC-focused, avionics-centric). Depth axis locked (fault-tolerant graceful degradation). Flight excluded. Demos redefined. Scope inclusions and exclusions enumerated. Locked principles enumerated. Open questions surfaced.
 - **v0.3** (2026-05-12): Public-facing reframe — mission statement depersonalized, stakeholder framing neutralized (§2 renamed to Intended Audiences), §9 renamed to Engineering Quality Rubric, JPL Power of 10 added as §10.6.
 - **v0.4** (2026-05-12): Scope update — SD card onboard logging removed (Pi 5 handles all logging over telemetry); ground station UI description expanded to reflect multi-pane dashboard with 3D attitude visualization and fin deflection view.
+- **v0.5** (2026-05-12): Open questions reframed as timeless (removed phase-gate language); NASA-STD-7009 added as a deferred candidate for simulation validation.
