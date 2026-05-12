@@ -1,6 +1,6 @@
 # Project Constraints & Context
 
-**Version:** v0.6 (locked — supersedes v0.5)
+**Version:** v0.7 (locked — supersedes v0.6)
 **Last updated:** 2026-05-12
 **Status:** Phase 0 complete.
 
@@ -8,7 +8,7 @@
 
 ## 1. Mission Need
 
-Design, build, and validate a bench-top model rocketry GNC (Guidance, Navigation, and Control) suite demonstrating closed-loop attitude control with fault-tolerant sensor fusion under deliberate sensor compromise — within a 16-week window (May–July 2026) using a Raspberry Pi 5 as the development and ground station platform.
+Design, build, and validate a bench-top model rocketry GNC (Guidance, Navigation, and Control) suite demonstrating closed-loop attitude control with fault-tolerant sensor fusion under deliberate sensor compromise — using a Raspberry Pi 5 as the development and ground station platform.
 
 This is a *founding statement*, not a specification. Specifications are downstream.
 
@@ -17,7 +17,7 @@ This is a *founding statement*, not a specification. Specifications are downstre
 ## 2. Intended Audiences
 
 - **Aerospace engineering faculty** — the primary technical audience. The project engages real aerospace subdisciplines (GNC, FDIR) and must hold up to domain scrutiny.
-- **Current program professor** — issued the Pi 5 kit; expects a completed deliverable by July 2026. Scope and documentation must be legible to a software engineering background.
+- **Current program professor** — issued the Pi 5 kit; expects a completed deliverable. Scope and documentation must be legible to a software engineering background.
 - **UAE aerospace and defense industry** — secondary audience for whom fault-tolerant GNC and GPS-denied operation analogues are directly relevant.
 - **The builder** — technical growth and genuine understanding are first-class outcomes, not side effects.
 
@@ -50,19 +50,7 @@ Additional sensors, microcontrollers, flight controllers, RF modules, mounting s
 
 Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed in 3.2). Contributions from monthly stipend (~AED1,000/month available) plus possible family contribution. Not a hard cap; specific expenditures justified case-by-case.
 
-### 3.6 Time
-
-**~16 weeks calendar** (May 11 – end of July 2026).
-
-Estimated total work budget: **~400 hours** (350–450 conservative range).
-
-- Baseline: ~20 hrs/week × 10 weeks ≈ 200 hours
-- Vacation surge: ~45 hrs/week × 6 weeks ≈ 270 hours
-- Haircut for life, exams, illness, motivation troughs.
-
-This is *not* a casual side-project budget. It places ambitious work within reach but does not place a full CubeSat or anything requiring multi-month skill ramps within reach.
-
-### 3.7 Workspace
+### 3.6 Workspace
 
 - **Primary:** home.
 - **Outdoor:** available.
@@ -108,7 +96,7 @@ This direction is selected because:
 
 ---
 
-## 6. Demos (deliverables for July presentation)
+## 6. Demos (Deliverables)
 
 ### Demo 1 — Live bench demo (PRIMARY)
 
@@ -182,7 +170,7 @@ Every architectural or scope decision is logged with date, decision, alternative
 
 ### 10.4 Procurement reality is a hard constraint
 
-The trade space is bounded by what can actually be acquired in the UAE on this timeline and budget. Theoretical availability is not availability.
+The trade space is bounded by what can actually be acquired in the UAE within budget. Theoretical availability is not availability.
 
 ### 10.5 Authoritative sources for regulatory questions
 
@@ -209,9 +197,10 @@ These are unresolved. They'll be answered when the project reaches them.
 
 ## 12. Version History
 
-- **v0.1** (2026-05-11): Initial strawman. Time budget estimated at 128 hours (incorrect — based on misread of "3 hours per week"). No domain locked.
-- **v0.2** (2026-05-11): Time budget corrected to ~400 hours. Domain locked (model rocketry). Project shape locked (bench-only, GNC-focused, avionics-centric). Depth axis locked (fault-tolerant graceful degradation). Flight excluded. Demos redefined. Scope inclusions and exclusions enumerated. Locked principles enumerated. Open questions surfaced.
+- **v0.1** (2026-05-11): Initial strawman. No domain locked.
+- **v0.2** (2026-05-11): Domain locked (model rocketry). Project shape locked (bench-only, GNC-focused, avionics-centric). Depth axis locked (fault-tolerant graceful degradation). Flight excluded. Demos redefined. Scope inclusions and exclusions enumerated. Locked principles enumerated. Open questions surfaced.
 - **v0.3** (2026-05-12): Public-facing reframe — mission statement depersonalized, stakeholder framing neutralized (§2 renamed to Intended Audiences), §9 renamed to Engineering Quality Rubric, JPL Power of 10 added as §10.6.
 - **v0.4** (2026-05-12): Scope update — SD card onboard logging removed (Pi 5 handles all logging over telemetry); ground station UI description expanded to reflect multi-pane dashboard with 3D attitude visualization and fin deflection view.
 - **v0.5** (2026-05-12): Open questions reframed as timeless (removed phase-gate language); NASA-STD-7009 added as a deferred candidate for simulation validation.
 - **v0.6** (2026-05-12): Telemetry link made bidirectional; demo/flight mode toggle added to scope (D020); true C2 depth added as stretch open question.
+- **v0.7** (2026-05-12): Time constraints removed from all sections; D002 retired via D021.

@@ -38,4 +38,4 @@ Nothing currently blocked.
 ## Next 1–3 concrete tasks
 
 1. **Review v0.2 constraints document.** Read carefully. Push back on anything that doesn't match what was decided in Phase 0. Iterate to v0.3. (Estimated: 30 minutes including reading + reaction.)
-2. **Pi 5 bring-up (next chat).** Install OS, establish SSH access, verify GPIO and camera enumerate, run a "hello world" hardware interaction (LED blink or sensor read from starter kit). (Estimated: 4–6 hours work.)
+2. **Pi 5 bring-up (next chat).** Install OS, establish SSH access, verify GPIO and camera enumerate, run a "hello world" hardware interaction (LED blink or sensor read from starter kit).
