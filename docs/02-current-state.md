@@ -23,7 +23,7 @@ Nothing has been built yet. Pi 5 kit is physically on hand, not yet configured.
 
 - Phase 0 complete — project shape, depth axis, scope, and principles all locked.
 - Constraints document locked at v0.7.
-- Decisions log populated: D001–D021.
+- Decisions log populated: D001–D022.
 - Coding standard locked: NASA JPL Power of 10.
 - Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
 
@@ -38,4 +38,4 @@ Nothing blocked.
 ## Next concrete tasks
 
 1. **Pi 5 bring-up (Thursday).** DietPi install, SSH access, GPIO and camera verification, hello-world hardware interaction.
-2. **Open Phase 1.** Begin requirements doc (Core/04-requirements.md) — functional and non-functional requirements, fault tolerance requirements baked in from the start.
+2. **Open Phase 1.** Begin requirements doc (docs/04-requirements.md) — functional and non-functional requirements, fault tolerance requirements baked in from the start.

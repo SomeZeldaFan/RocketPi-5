@@ -159,3 +159,13 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Rationale:** Time constraints are an internal planning concern, not a property of the project or its engineering. Public-facing documentation should reflect what is being built and to what standard — not how long it takes.
 **Alternatives considered:**
 - Keep D002 and time tracking in constraints doc — rejected; it adds no value to external readers and frames the project as a student assignment rather than an engineering artifact.
+
+### D022 — Repo structure: domain-first, aerospace-adjacent naming
+
+**Decision:** Top-level repo structure is domain-first with aerospace-conventional naming. Six top-level directories: `avionics/` (MCU code: control loop, estimator, FDIR, telemetry), `gcs/` (Pi 5 ground control station: dashboard, C2, telemetry receiver), `sim/` (RocketPy + hardware-in-the-loop simulation), `analysis/` (post-test Python tooling), `hardware/` (KiCad schematics, STL files, wiring diagrams), `docs/` (engineering documents, formerly `Core/`). Each folder is an independent system with its own toolchain and build system.
+**Rationale:** The folder layout reflects the system architecture directly — a reader opening the repo sees the system decomposition before reading a single line of code. Terms `avionics` and `gcs` locate the project in aerospace, not just embedded systems. Domain-first structure avoids the false unity implied by `src/` when the codebase spans C firmware, Python application, and Python simulation with no shared build system.
+**Alternatives considered:**
+- Organic/incremental (keep `Core/`, add folders as needed) — rejected; defers a decision cheaper to make now than after code exists.
+- Traditional `src/` monorepo — rejected; `src/` flattens heterogeneous systems that don't share a build system or deployment target; reads as a software project, not an avionics project.
+- Domain-first with generic naming (`firmware/`, `groundstation/`) — rejected in favor of aerospace-conventional terms.
+- Keep `Core/` folder name — rejected in favor of `docs/`; standard name communicates faster to outside readers; the numbered file convention already signals deliberate structure without the folder name needing to carry that weight.
