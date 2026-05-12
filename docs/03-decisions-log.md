@@ -169,3 +169,11 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 - Traditional `src/` monorepo — rejected; `src/` flattens heterogeneous systems that don't share a build system or deployment target; reads as a software project, not an avionics project.
 - Domain-first with generic naming (`firmware/`, `groundstation/`) — rejected in favor of aerospace-conventional terms.
 - Keep `Core/` folder name — rejected in favor of `docs/`; standard name communicates faster to outside readers; the numbered file convention already signals deliberate structure without the folder name needing to carry that weight.
+
+### D023 — Phase 1 opens with top-level system architecture review preceding requirements
+
+**Decision:** Phase 1 begins with a structured options review of the top-level system architecture before requirements are written. The review identifies the major system nodes, interface choices, and structural decisions with genuine options and downstream consequences. The output is an explicit system concept that requirements and subsequent Phase 1 decisions sequence from.
+**Rationale:** Requirements written without an explicit system concept are anchored to an implicit architecture scattered across the constraints doc and the engineer's working memory — not in a single authoritative artifact. Making the system concept explicit first ensures requirements are written against something concrete, and surfaces structural choices (IMU count, real-time path ownership, sensor bus topology) that directly constrain what requirements are achievable.
+**Alternatives considered:**
+- Write requirements first, derive system concept from them — rejected; requirements without a concrete system reference are either too abstract (no implementation path) or lock structural choices without examining them.
+- Derive system concept informally from constraints doc prose — rejected; the constraints doc describes the system across multiple sections in prose; that is not an architecture artifact, it is a description.

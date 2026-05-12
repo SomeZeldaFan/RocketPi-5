@@ -8,7 +8,7 @@ Live project status. Updated at the end of every work session.
 
 ## Where we are
 
-**Phase:** Phase 0 complete. Phase 1 (requirements + architecture) not yet started.
+**Phase:** Phase 1 open — top-level system architecture review in progress.
 
 **Constraints doc:** v0.7 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
@@ -29,7 +29,7 @@ Nothing has been built yet. Pi 5 kit is physically on hand, not yet configured.
 
 ## What's in progress
 
-Nothing active. Between Phase 0 and Phase 1.
+Structured top-level system architecture options review — output establishes the explicit system concept that Phase 1 requirements and architecture decisions sequence from.
 
 ## What's blocked
 
@@ -37,5 +37,6 @@ Nothing blocked.
 
 ## Next concrete tasks
 
-1. **Pi 5 bring-up (Thursday).** DietPi install, SSH access, GPIO and camera verification, hello-world hardware interaction.
-2. **Open Phase 1.** Begin requirements doc (docs/04-requirements.md) — functional and non-functional requirements, fault tolerance requirements baked in from the start.
+1. **Pi 5 bring-up.** DietPi install, SSH access, GPIO and camera verification, hello-world hardware interaction. (Parallel track — does not block Phase 1.)
+2. **Complete structured architecture review** → make executive decisions on structural questions → document explicit system concept.
+3. **Log Phase 1 decision sequencing (D024)** → open requirements doc (docs/04-requirements.md).
