@@ -139,3 +139,16 @@ Format: **Date — Decision — Rationale — Alternatives considered.**
 - MISRA-C — more comprehensive (~140 rules) but requires static analysis tooling to enforce properly; overhead not justified at this scale.
 - DO-178C — airborne software certification standard; overkill for a bench demo, not applicable without a certification authority.
 - Custom disciplined subset — valid but less credible without a named standard to reference in documentation and writeup.
+
+### D020 — Telemetry link made bidirectional: demo/flight mode toggle
+
+**Decision:** The telemetry link between the MCU and Pi ground station is bidirectional. The Pi can command the MCU to switch between two operating modes:
+- **Flight mode** — real deflection limits applied (±3° or equivalent per control law)
+- **Demo mode** — relaxed deflection limits for presentation legibility
+
+The MCU acknowledges mode commands. The ground station UI reflects the active mode and acknowledgment status.
+**Rationale:** Turns the ground station into a genuine command and control node, not just a display. Strengthens defense-relevance framing. No new hardware required — LoRa modules are inherently bidirectional. The mode toggle is immediately legible to any audience. Scoped conservatively: basic acknowledgment only, not full C2 protocol.
+**Alternatives considered:**
+- Visual exaggeration only (ground station exaggerates fin movement on screen, hardware stays at real limits) — rejected as less honest and less interesting engineering.
+- Full C2 implementation (authentication, command sequencing, link-loss fail-safe) — deferred to stretch goal; cost is 40–60 additional hours and adds real-time complexity to the MCU control loop.
+- No C2 at all — rejected; bidirectional link is a meaningful scope addition with no hardware cost.
