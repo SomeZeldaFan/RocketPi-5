@@ -14,7 +14,7 @@ Format: **Date — Decision — Rationale — Alternatives considered.**
 **Rationale:** Real engineering does not jump from mission need to solution. Premature concept lock is the dominant failure mode for ambitious student projects.
 **Alternatives:** "Just pick a project and start" — rejected as the failure mode we're trying to avoid.
 
-### D002 — Time budget set at ~400 hours (350–450 range)
+### D002 — Time budget set at ~400 hours (350–450 range) *(superseded by D021)*
 
 **Decision:** Working assumption is ~20 hrs/week baseline + ~45 hrs/week × ~6 vacation weeks, with conservative haircuts for life and motivation troughs. Total budget ~400 hours across 16 weeks.
 **Rationale:** Initial estimate of 128 hours was based on misread "3 hrs/week" — corrected after clarification that 20 hrs/week is sustainable.
@@ -152,3 +152,10 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 - Visual exaggeration only (ground station exaggerates fin movement on screen, hardware stays at real limits) — rejected as less honest and less interesting engineering.
 - Full C2 implementation (authentication, command sequencing, link-loss fail-safe) — deferred to stretch goal; cost is 40–60 additional hours and adds real-time complexity to the MCU control loop.
 - No C2 at all — rejected; bidirectional link is a meaningful scope addition with no hardware cost.
+
+### D021 — Time budget tracking removed from documentation (supersedes D002)
+
+**Decision:** Explicit time budgets, hour estimates, and week counts are no longer tracked in the project documentation. D002 is retired.
+**Rationale:** Time constraints are an internal planning concern, not a property of the project or its engineering. Public-facing documentation should reflect what is being built and to what standard — not how long it takes.
+**Alternatives considered:**
+- Keep D002 and time tracking in constraints doc — rejected; it adds no value to external readers and frames the project as a student assignment rather than an engineering artifact.
