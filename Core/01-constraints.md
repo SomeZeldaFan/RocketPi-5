@@ -1,6 +1,6 @@
 # Project Constraints & Context
 
-**Version:** v0.3 (locked — supersedes v0.2)
+**Version:** v0.4 (locked — supersedes v0.3)
 **Last updated:** 2026-05-12
 **Status:** Phase 0 complete.
 
@@ -131,8 +131,7 @@ RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with 
 - Sensor health monitoring and fault detection logic
 - Graceful degradation under sensor compromise
 - Telemetry downlink to Pi 5 ground station
-- Live ground station UI showing telemetry and sensor health
-- Onboard data logging (SD card)
+- **Live ground station UI** running on the Pi 5 (1024×600 touch display, or external monitor). Multi-pane dashboard showing: live telemetry charts, sensor health status and confidence indicators, the system's own estimate of data accuracy and veracity, a real-time 3D attitude visualization of the rocket body driven by the estimator output, and a separate zoomed view of the fin assembly showing actuated control surface deflections as they occur.
 - High-fidelity simulation of vehicle in hypothetical flight
 - Post-test analysis tooling (Python, on dev machine)
 - Documentation: requirements, architecture, decisions, test results, post-project writeup
@@ -210,3 +209,4 @@ These are unresolved and need attention in Phase 1 or before:
 - **v0.1** (2026-05-11): Initial strawman. Time budget estimated at 128 hours (incorrect — based on misread of "3 hours per week"). No domain locked.
 - **v0.2** (2026-05-11): Time budget corrected to ~400 hours. Domain locked (model rocketry). Project shape locked (bench-only, GNC-focused, avionics-centric). Depth axis locked (fault-tolerant graceful degradation). Flight excluded. Demos redefined. Scope inclusions and exclusions enumerated. Locked principles enumerated. Open questions surfaced.
 - **v0.3** (2026-05-12): Public-facing reframe — mission statement depersonalized, stakeholder framing neutralized (§2 renamed to Intended Audiences), §9 renamed to Engineering Quality Rubric, JPL Power of 10 added as §10.6.
+- **v0.4** (2026-05-12): Scope update — SD card onboard logging removed (Pi 5 handles all logging over telemetry); ground station UI description expanded to reflect multi-pane dashboard with 3D attitude visualization and fin deflection view.
