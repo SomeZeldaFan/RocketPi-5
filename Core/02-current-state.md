@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-05-11
+**Last updated:** 2026-05-12
 
 This document is the project's snapshot. It changes constantly — ideally at the end of every work session. Its job is to let you (or anyone) reconstruct project state in 60 seconds.
 

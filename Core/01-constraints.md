@@ -1,7 +1,7 @@
 # Project Constraints & Context
 
 **Version:** v0.2 (draft for review — supersedes v0.1)
-**Last updated:** 2026-05-11
+**Last updated:** 2026-05-12
 **Status:** Phase 0 nearly complete. Locks at v0.3 after review.
 
 ---
