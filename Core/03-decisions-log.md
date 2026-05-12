@@ -126,3 +126,16 @@ Format: **Date — Decision — Rationale — Alternatives considered.**
 - Arch Linux ARM — rejected: rolling-release maintenance load across 16 weeks; Pi 5 kernel-patch support sometimes lags.
 - Alpine Linux — rejected: musl libc breaks Python scientific wheels needed for simulation work later.
 - Buildroot/Yocto — rejected: hours-to-days image build effort; not viable on this timeline.
+
+---
+
+## 2026-05-12
+
+### D019 — Coding standard: NASA JPL Power of 10
+
+**Decision:** All flight-critical and control-path code written for this project abides by the NASA JPL Power of 10 rules.
+**Rationale:** Short (10 rules), principled, credible to aerospace reviewers, and actually enforceable by a solo developer without specialized tooling. Strikes the right balance between rigor and practicality for a student-level project that aims to read as professional aerospace engineering.
+**Alternatives considered:**
+- MISRA-C — more comprehensive (~140 rules) but requires static analysis tooling to enforce properly; overhead not justified at this scale.
+- DO-178C — airborne software certification standard; overkill for a bench demo, not applicable without a certification authority.
+- Custom disciplined subset — valid but less credible without a named standard to reference in documentation and writeup.
