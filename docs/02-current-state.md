@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-16
 
 Live project status. Updated at the end of every work session.
 
@@ -16,7 +16,7 @@ Live project status. Updated at the end of every work session.
 **Flight:** Excluded.
 **System architecture:** Locked (D024–D034). Custom semi-monocoque airframe path adopted (D031); D011 retired.
 
-Pi 5 kit is physically on hand, not yet configured. Avionics components not yet procured.
+Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GPIO stack verified). VS Code Remote-SSH setup deferred to next session. Avionics components not yet procured.
 
 ---
 
@@ -30,6 +30,7 @@ Pi 5 kit is physically on hand, not yet configured. Avionics components not yet 
 - **Phase 1 architecture review complete** (per D023). Eleven structural decisions logged as D024–D034, covering: IMU configuration, real-time path ownership, sensor bus topology, barometer inclusion, telemetry radio termination, MCU↔Pi physical link, control surface count, test stand / airframe configuration, Pi 5 role precision, power architecture, and authoritative time source.
 - Architecture document populated with hardware architecture (§2) and airframe structural architecture (§3 skeleton).
 - Risk register, test plan, and bibliography expanded with airframe-side entries.
+- **Pi 5 bring-up complete.** DietPi v10.3.3 installed on kernel 6.18.29+rpt-rpi-2712. SSH access confirmed at 192.168.3.25 (wlan0). GPIO stack verified: lgpio 0.2.2 + gpiozero 2.0.1 on gpiochip0 (RP1). Hardware revision e04171.
 
 ## What's in progress
 
@@ -37,6 +38,7 @@ Two parallel tracks now open under Phase 1:
 
 - **Avionics: requirements writing.** Open `docs/04-requirements.md` and write system-level, estimation, control, FDIR, telemetry, simulation, documentation, and demonstration requirements rooted in the now-explicit system concept.
 - **Airframe: structural design.** Begin CAD work — first-pass body geometry, avionics bay placement, fin pivot locations, gimbal mount integration. Material/print-parameter coupon testing to follow before committing to full airframe prints.
+- **Pi 5 bring-up: VS Code Remote-SSH.** Final bring-up item — connect VS Code on dev laptop to Pi via Remote-SSH extension. Deferred from 2026-05-16 session.
 
 ## What's blocked
 
@@ -46,6 +48,6 @@ Nothing blocked.
 
 1. **Open `docs/04-requirements.md`** and write the first pass of system-level requirements rooted in the architecture concept in `docs/05-architecture.md` §2.
 2. **Begin airframe CAD** — first-pass body geometry, avionics bay placement, fin pivot locations, gimbal mount integration. Run material coupon prints as the structural design firms up.
-3. **Pi 5 bring-up** (parallel track — does not block the other two). DietPi install, SSH access, GPIO verification, hello-world hardware interaction.
+3. **Pi 5: VS Code Remote-SSH setup.** Install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
 4. **Compose the formal system block diagram** referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
 5. **Begin component selection** once requirements firm enough to bound trade spaces (MCU per constraints §11.1, IMUs and barometer per §11.2, telemetry module per §11.3). Procurement reality (constraints §10.4) is a binding input — UAE-procurable parts only.
