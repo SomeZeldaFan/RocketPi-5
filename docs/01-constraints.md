@@ -29,7 +29,7 @@ This is a *founding statement*, not a specification. Specifications are downstre
 
 ### 3.1 Hardware on hand
 
-Raspberry Pi 5 kit: Pi 5, breadboard, LCD display, starter kit components, image/camera sensor, power supply, SD card, case.
+Raspberry Pi 5 kit: Pi 5, breadboard, LCD display, starter kit components, power supply, SD card, case.
 
 ### 3.2 Tools available
 

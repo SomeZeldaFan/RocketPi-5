@@ -46,6 +46,6 @@ Nothing blocked.
 
 1. **Open `docs/04-requirements.md`** and write the first pass of system-level requirements rooted in the architecture concept in `docs/05-architecture.md` §2.
 2. **Begin airframe CAD** — first-pass body geometry, avionics bay placement, fin pivot locations, gimbal mount integration. Run material coupon prints as the structural design firms up.
-3. **Pi 5 bring-up** (parallel track — does not block the other two). DietPi install, SSH access, GPIO and camera verification, hello-world hardware interaction.
+3. **Pi 5 bring-up** (parallel track — does not block the other two). DietPi install, SSH access, GPIO verification, hello-world hardware interaction.
 4. **Compose the formal system block diagram** referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
 5. **Begin component selection** once requirements firm enough to bound trade spaces (MCU per constraints §11.1, IMUs and barometer per §11.2, telemetry module per §11.3). Procurement reality (constraints §10.4) is a binding input — UAE-procurable parts only.
