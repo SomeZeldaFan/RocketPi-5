@@ -32,6 +32,17 @@ The function is to not lose useful sources. When you're debugging a sensor at 2a
 - **NAR (National Association of Rocketry) safety code & motor classification** — https://www.nar.org
   *Universal vocabulary for hobby rocket motors; useful even though we're not flying.*
 
+## Aerospace structures references (added 2026-05-15 per D031)
+
+- **Megson, T.H.G., *Aircraft Structures for Engineering Students*** — Butterworth-Heinemann.
+  *Standard undergraduate aerospace structures textbook. Covers semi-monocoque construction (skin / frame / stringer load paths) at the right level for the bench-load envelope we are designing against. Primary reference for the airframe chapter.*
+
+- **Bruhn, E.F., *Analysis and Design of Flight Vehicle Structures*** — Jacobs Publishing.
+  *Canonical aerospace structures reference. Over-precise for our bench-only load envelope but useful for completeness and credibility, and as a deeper reference if specific load paths warrant detailed analysis.*
+
+- **NASA Technical Reports on additively-manufactured structural elements** — https://ntrs.nasa.gov
+  *NASA Glenn and Langley have published on additively-manufactured (FDM and other) structural test results. Directly relevant to the FDM-printed airframe construction approach. Specific reports to be cataloged here as identified during airframe design.*
+
 ---
 
 *Add references here as they're found.*

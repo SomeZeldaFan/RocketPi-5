@@ -33,6 +33,15 @@ Example structure:
 - Loss of motivation during long debugging slogs.
 - Polytechnic institutional access not materializing.
 
+## Airframe-side seed risks (added 2026-05-15 per D031)
+
+- **Airframe CAD iteration creep.** Custom mechanical design with iteration is a classic schedule sink in real aerospace programs; explicit design-freeze discipline required after one or two revisions.
+- **3D print failure modes.** Layer adhesion, warping, infill issues, large-print failures — each failed print consumes significant printer time and material.
+- **Structural failure under demo-cycle perturbation loads.** Repeated bench perturbations may fatigue the printed structure over many demo and rehearsal cycles; coupon testing should precede full-airframe commitment.
+- **Material / print-parameter selection risk.** Strength and stiffness vary significantly with filament family, print orientation, wall thickness, and infill pattern; wrong choices found late are expensive (full reprints).
+- **Avionics–airframe integration mismatch.** Purpose-fit design only stays purpose-fit if avionics and airframe iteration cycles stay synchronized through their interface points (avionics bay dimensions, sensor mount positions, servo bracket geometry, gimbal mount).
+- **FDIR false positives from undiagnosed coupling.** Even with split rails per D033, integration may reveal unanticipated cross-channel noise (ground bounce, magnetic coupling, mechanical vibration coupling); budget for shakedown testing before relying on FDIR cleanliness for demos.
+
 ---
 
 *Review the register at the start of each phase and after any significant procurement or integration milestone.*
