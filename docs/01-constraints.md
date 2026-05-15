@@ -1,8 +1,8 @@
 # Project Constraints & Context
 
-**Version:** v0.7 (locked — supersedes v0.6)
-**Last updated:** 2026-05-12
-**Status:** Phase 0 complete.
+**Version:** v0.8 (locked — supersedes v0.7)
+**Last updated:** 2026-05-15
+**Status:** Phase 0 complete. Phase 1 architecture review locked (D024–D034).
 
 ---
 
@@ -128,7 +128,6 @@ RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with 
 ## 8. Scope: Exclusions
 
 - **No flight.** Static / bench testing only.
-- **No custom airframe design.** Commercial kit only, modified for integration.
 - **No propulsion work.** Commercial motors only (and only as static prop, not fired).
 - **No TVC (thrust vectoring control)** on any flight-intended article.
 - **No projectiles, no kinetic payload, no weaponization** of any kind, in any framing.
@@ -186,12 +185,11 @@ All control-path and flight-critical code abides by the NASA JPL Power of 10 rul
 
 These are unresolved. They'll be answered when the project reaches them.
 
-1. **Specific microcontroller choice.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns.
-2. **Specific IMU and barometer selection.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work).
+1. **Specific microcontroller choice.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns. *Trade space now bounded by D025/D026/D028/D029/D034: ≥1 SPI peripheral with at least 2 chip-selects accessible, ≥1 I2C peripheral, ≥4 PWM channels, ≥2 UARTs with DMA, hardware monotonic timer, and compute headroom for dual-IMU fusion + FDIR + control law at 200+ Hz. STM32F4-class and above remain candidates; smaller targets ruled out.*
+2. **Specific IMU and barometer selection.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work). *Trade space now bounded by D024 (two heterogeneous IMUs — different chip families) and D026 (SPI-capable IMU parts; I2C barometer). Specific parts still open.*
 3. **Specific telemetry band and module.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
-4. **Airframe presence question.** Open whether the test stand uses a real commercial airframe or a pure avionics test rig.
-5. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 3). Defer until simulation scope is defined.
-6. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
+4. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 3). Defer until simulation scope is defined.
+5. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
 
 ---
 
@@ -204,3 +202,4 @@ These are unresolved. They'll be answered when the project reaches them.
 - **v0.5** (2026-05-12): Open questions reframed as timeless (removed phase-gate language); NASA-STD-7009 added as a deferred candidate for simulation validation.
 - **v0.6** (2026-05-12): Telemetry link made bidirectional; demo/flight mode toggle added to scope (D020); true C2 depth added as stretch open question.
 - **v0.7** (2026-05-12): Time constraints removed from all sections; D002 retired via D021.
+- **v0.8** (2026-05-15): Phase 1 top-level architecture review locked (D024–D034). Custom semi-monocoque 3D-printed airframe path adopted (D031); D011 retired. §8 airframe exclusion removed. §11.4 airframe-presence open question resolved. §11.1 (MCU choice) and §11.2 (IMU/baro selection) annotated with bounded trade spaces from the architecture decisions; open-question numbering shifted accordingly.
