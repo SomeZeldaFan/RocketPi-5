@@ -277,3 +277,25 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Alternatives considered:**
 - Pi timestamps on receipt — rejected; radio + Linux variance contaminate timestamps; replay analysis becomes noisy; cross-session comparison breaks.
 - Both clocks with Pi as authoritative — rejected; same problem as Pi-only.
+
+---
+
+## 2026-05-18
+
+### D035 — User-implemented estimation algorithm required; proprietary on-chip fusion excluded
+
+**Decision:** The attitude estimation algorithm shall be implemented in full by the project author. Proprietary vendor-provided on-chip fusion firmware — including fusion modes such as the BNO055's NDOF mode — is excluded. The algorithm source code must be fully inspectable and compliant with the NASA JPL Power of 10 standard. An EKF or equivalent user-implemented algorithm (e.g., Madgwick/Mahony complementary filter) satisfies this requirement.
+**Rationale:** Three independent reasons, each sufficient alone. First, JPL Power of 10 (D019) cannot be applied to firmware that cannot be read — a vendor fusion blob is a black box, and claiming compliance for it is indefensible to an aerospace reviewer. Second, the project's educational rationale (D005) requires that the fusion algorithm is built and understood; delegating it to a chip vendor defeats the purpose. Third, the FDIR cross-check (D024) requires raw sensor residuals — on-chip fusion may silently correct a fault before the FDIR module sees it, hiding the fault rather than exposing it.
+**Alternatives considered:**
+- BNO055 in NDOF fusion mode — rejected; all three rationale legs apply.
+- BNO055 in raw output mode (fusion disabled) — rejected; raw mode is not the BNO055's primary design configuration; the M0 co-processor still runs in the background; better to select chips designed as raw sensors.
+- One fusion IMU + one raw IMU — rejected; asymmetric outputs make the innovation gate incoherent (different noise models, different uncertainty characteristics).
+- Complementary filter (Madgwick/Mahony) instead of EKF — not rejected; this is covered by "or equivalent" and satisfies all three rationale legs. Decision on specific algorithm deferred to implementation.
+
+### D036 — Demonstration requirements held open
+
+**Decision:** The demonstration deliverables described in Constraints §6 (Demo 1, Demo 3) are held open and are not treated as locked prescriptive requirements. The specific demo format, scope, and acceptance criteria will be defined once the core system is functional and its actual capabilities are known. The §6 descriptions are illustrative of intent, not binding deliverables.
+**Rationale:** Locking demo requirements before the system works risks designing the demo around a script rather than around the system's genuine capabilities. A demo defined after the system is working can be shaped to show what the system actually does well — which is more authentic and more compelling than one defined speculatively upfront. The core deliverable (a working fault-tolerant GNC system) is unchanged; the presentation of that deliverable is deferred.
+**Alternatives considered:**
+- Lock Demo 1 as a prescriptive requirement now — rejected; Demo 1 as described in §6 may not reflect the most effective way to present the system once it is working. The constraint on the demo should be the system's real capabilities, not an upfront script.
+- Drop demos entirely — rejected; a live demonstration remains a project deliverable; only the prescriptive specification of its content is deferred.
