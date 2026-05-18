@@ -292,6 +292,14 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 - One fusion IMU + one raw IMU — rejected; asymmetric outputs make the innovation gate incoherent (different noise models, different uncertainty characteristics).
 - Complementary filter (Madgwick/Mahony) instead of EKF — not rejected; this is covered by "or equivalent" and satisfies all three rationale legs. Decision on specific algorithm deferred to implementation.
 
+### D037 — Hardware selection proceeds ahead of LR-2 and LR-3 completion
+
+**Decision:** MCU, IMU, and barometer selection proceeds now, before LR-2 and LR-3 are complete. LR-2 (MEMS IMU estimation accuracy) is downstream of IMU selection — it requires real datasheet noise specs to produce a meaningful accuracy target, not a class-level estimate. LR-3 (innovation gating design) is downstream of both LR-1 and IMU selection, as IMU noise specs inform the gating threshold. The functional requirements already written (REQ-SYS-003, REQ-EST-008, D024, D026, constraints §11.1–11.2) are sufficient to bound the hardware trade space without LR-2 or LR-3 complete. LR-1 (control loop rate) is independent of hardware selection and runs in parallel.
+**Rationale:** The direction of dependency between LR-2 and IMU selection runs from selection to LR, not the reverse. Running LR-2 before IMU selection would mean analysing against generic class-level sensor specs — producing an estimate rather than a committable requirement. Selecting IMUs on functional grounds first (SPI-capable, heterogeneous families, raw output per D035, UAE-procurable per constraints §10.4) and then running LR-2 against real datasheet specs produces a defensible, traceable requirement. Additionally, hardware procurement has lead times that compound with delay; and component dimensions (MCU, IMU packages) are needed to dimension the avionics bay in CAD.
+**Alternatives considered:**
+- Complete LR-2 before IMU selection — rejected; LR-2 against class-level specs produces an estimate, not a committable requirement. Direction of dependency is inverted.
+- Complete LR-1 before MCU selection — not required; constraints §11.1 already bounds the MCU trade space to STM32F4-class and above; LR-1 is unlikely to produce a loop rate requirement that an F4-class MCU cannot meet; "and above" in the constraint is the explicit safety margin for this uncertainty.
+
 ### D036 — Demonstration requirements held open
 
 **Decision:** The demonstration deliverables described in Constraints §6 (Demo 1, Demo 3) are held open and are not treated as locked prescriptive requirements. The specific demo format, scope, and acceptance criteria will be defined once the core system is functional and its actual capabilities are known. The §6 descriptions are illustrative of intent, not binding deliverables.
