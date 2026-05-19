@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-05-18
+**Last updated:** 2026-05-19
 
 Live project status. Updated at the end of every work session.
 
@@ -8,7 +8,7 @@ Live project status. Updated at the end of every work session.
 
 ## Where we are
 
-**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Active tracks: hardware component selection (MCU, IMUs, barometer, radio, servos) and airframe structural design (CAD). Literature reviews LR-2 and LR-3 follow hardware selection; LR-1 can run in parallel now.
+**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Active tracks: airframe structural design (CAD), coding framework, and literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending LR-4 and CAD.
 
 **Constraints doc:** v0.8 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
@@ -16,7 +16,7 @@ Live project status. Updated at the end of every work session.
 **Flight:** Excluded.
 **System architecture:** Locked (D024–D034). Custom semi-monocoque airframe path adopted (D031); D011 retired.
 
-Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GPIO stack verified). VS Code Remote-SSH setup deferred. Avionics component selection in progress (D037).
+Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GPIO stack verified). VS Code Remote-SSH setup deferred. Avionics component selection complete (D038–D042). Coding framework now unblocked — MCU confirmed as STM32F407ZGT6; toolchain is STM32CubeIDE + HAL.
 
 ---
 
@@ -28,6 +28,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 - Coding standard locked: NASA JPL Power of 10.
 - Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
 - **Phase 1 architecture review complete** (per D023). Eleven structural decisions logged as D024–D034, covering: IMU configuration, real-time path ownership, sensor bus topology, barometer inclusion, telemetry radio termination, MCU↔Pi physical link, control surface count, test stand / airframe configuration, Pi 5 role precision, power architecture, and authoritative time source.
+- **Hardware selection complete** (D038–D042). UAE 433 MHz band confirmed (TDRA). MCU: STM32F407ZGT6 core board. IMU-1: GY-BMI160 (Bosch BMI160). IMU-2: ICM-42688-P breakout (TDK InvenSense). Barometer: MS5611 via GY-63 module. Radio: HolyBro SiK V3 433 MHz pair. All components on breakout modules or core boards — no custom PCB required. ST-Link V2 and full tooling procured. LR-2, LR-3, and coding framework all unblocked.
 - Architecture document populated with hardware architecture (§2) and airframe structural architecture (§3 skeleton).
 - Risk register, test plan, and bibliography expanded with airframe-side entries.
 - **Pi 5 bring-up complete.** DietPi v10.3.3 installed on kernel 6.18.29+rpt-rpi-2712. SSH access confirmed at 192.168.3.25 (wlan0). GPIO stack verified: lgpio 0.2.2 + gpiozero 2.0.1 on gpiochip0 (RP1). Hardware revision e04171.
@@ -35,7 +36,8 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 
 ## What's in progress
 
-- **Hardware component selection.** MCU (STM32F4-class+), IMUs (two heterogeneous SPI raw-output chips, per D024/D035), barometer (I2C). UAE procurability is a binding input per constraints §10.4. IMU selection unblocks LR-2. Radio selection pending UAE frequency regulatory check (TDRA). Servos shortlisted to metal-gear + position-feedback; finalised after LR-4 and CAD.
+- **Literature reviews LR-2 and LR-3.** Now unblocked by D040. LR-2: MEMS IMU estimation accuracy — run against BMI160 and ICM-42688-P datasheets (noise density, Allan deviation, bias instability); produces steady-state EKF error bound in degrees. LR-3: FDIR innovation gating — requires LR-1 result and IMU noise specs; chi-squared threshold and detection latency.
+- **Coding framework and deliverables plan.** Now unblocked — MCU confirmed as STM32F407ZGT6. Produces: repo scaffolding, C module interface headers (avionics application layer), GCS project structure, build system skeleton (STM32CubeIDE + HAL), and phased coding deliverable list.
 - **Airframe: structural design.** Begin CAD work — first-pass body geometry, avionics bay (dimensioned to selected components), fin pivot locations, gimbal mount integration. Material/print-parameter coupon testing to follow before committing to full airframe prints.
 - **Pi 5 bring-up: VS Code Remote-SSH.** Final bring-up item — connect VS Code on dev laptop to Pi via Remote-SSH extension. Deferred from 2026-05-16 session.
 
@@ -65,10 +67,11 @@ Nothing blocked.
 
 ## Next concrete tasks
 
-1. **Hardware component selection** — MCU (STM32F4-class+), IMUs (two heterogeneous SPI raw-output chips), barometer (I2C). Verify UAE procurability per constraints §10.4. IMU selection immediately unblocks LR-2. Radio selection pending TDRA frequency regulatory check. Servos: shortlist metal-gear + position-feedback candidates; finalise after LR-4 and CAD.
-2. **LR-1 — Control loop rate** — independent of hardware; run in parallel with task 1. Produces a justified Hz recommendation to commit into REQ-SYS-011.
-3. **Coding framework and deliverables plan** — follows hardware selection. Produces repo scaffolding, C module interface headers, GCS project structure, build system skeleton, and phased coding deliverable list.
-4. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations, gimbal mount integration. Unlocks LR-4. Run material coupon prints as structural design firms up.
-5. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
-6. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
-7. **Radio and servo finalisation** — radio after TDRA frequency check; servos after LR-4 and CAD provide torque and size requirements.
+1. **LR-1 — Control loop rate** — independent of hardware; runs now. Produces a justified Hz recommendation to commit into REQ-SYS-011.
+2. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
+3. **LR-3 — FDIR innovation gating** — unblocked by D040; requires LR-1 first. Produces detection latency bound in milliseconds (unblocks REQ-FDR-008).
+4. **Coding framework and deliverables plan** — unblocked by hardware selection. Produces repo scaffolding, C module interface headers, GCS project structure, build system skeleton (STM32CubeIDE + HAL), and phased coding deliverable list.
+5. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations, gimbal mount integration. Unlocks LR-4. Run material coupon prints as structural design firms up.
+6. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
+7. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
+8. **Servo finalisation** — after LR-4 and CAD provide torque and size requirements.
