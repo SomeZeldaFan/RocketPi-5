@@ -25,6 +25,39 @@ Reverse chronological — newest at the top — so the most recent context is im
 
 ## Entries
 
+## 2026-05-19
+
+**Session goal:** Hardware component selection — MCU, dual IMUs, barometer, radio.
+
+**What I did:**
+- Read docs 01–03 to confirm hardware selection readiness (D037 authorised it; #1 next task in current state).
+- Confirmed UAE frequency regulatory finding: 433 MHz legal per TDRA frequency sheet (D038).
+- Established hardware non-negotiables for MCU, IMUs, barometer, and radio before evaluating any candidates.
+- Evaluated and rejected STM32H743ZI/ZI2 Nucleo (D-cache coherency on SPI DMA); selected STM32F407ZGT6 core board (D039).
+- Evaluated BMI088 (unavailable in UAE), replaced with GY-BMI160 (Bosch); selected ICM-42688-P breakout (TDK InvenSense). Both verified by pinout image — CS independently accessible on each (D040).
+- Selected GY-63 MS5611 barometer; pinout verified — I2C pins, PS default high (D041).
+- Selected HolyBro SiK V3 433 MHz radio pair (D042).
+- Reviewed and approved full tooling list: Pinecil, UT61E+, FNIRSI 1014D, DIYUSER logic analyzer, ST-Link V2, jumper wires, pin headers, solder, flux pen.
+- Identified and added missing items to order: ST-Link V2 (critical — required for flashing and debugging), flux pen, flush cutters, IPA + swabs, ESD strap.
+
+**What I observed / learned:**
+- STM32H7 D-cache is a real engineering concern for SPI DMA, not a theoretical one. Cache invalidation required around every DMA transaction on the IMU read path. F4 avoids this entirely.
+- ICM-42688-P and BMI160 both expose CS independently on their breakout modules — confirmed visually before selection.
+- HolyBro SiK V3 UART logic is 3.3V despite 5V supply input — directly compatible with F407. Verify on datasheet before wiring.
+- Bare chip (LGA-14, LQFP) vs breakout module is a critical distinction for a first hardware build. All components selected as breakout modules or core boards — no custom PCB required at this stage.
+
+**Where I got stuck:** BMI088 went unavailable mid-session; replaced with GY-BMI160 after pinout verification.
+
+**Next session pickup:**
+1. LR-1 — control loop rate (independent, unblocked now).
+2. LR-2 — MEMS IMU accuracy (unblocked by D040; run against BMI160 and ICM-42688-P datasheets).
+3. LR-3 — FDIR innovation gating (unblocked by D040; requires LR-1 first).
+4. Coding framework and deliverables plan (unblocked — MCU confirmed as STM32F407ZGT6; toolchain is STM32CubeIDE + HAL; build system, repo scaffolding, and C module interface definitions can now be written).
+
+**Time spent:** ~3 hours.
+
+---
+
 ## 2026-05-16
 
 **Session goal:** Pi 5 first bring-up — DietPi install, SSH access, GPIO verification.
