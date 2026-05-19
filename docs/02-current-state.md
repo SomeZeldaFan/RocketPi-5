@@ -10,7 +10,7 @@ Live project status. Updated at the end of every work session.
 
 **Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Active tracks: airframe structural design (CAD), coding framework, and literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending LR-4 and CAD.
 
-**Constraints doc:** v0.8 locked.
+**Constraints doc:** v0.9 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
 **Depth axis:** Locked — fault-tolerant graceful degradation under sensor compromise.
 **Flight:** Excluded.
@@ -23,7 +23,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 ## What's done
 
 - Phase 0 complete — project shape, depth axis, scope, and principles all locked.
-- Constraints document locked at v0.8.
+- Constraints document locked at v0.9.
 - Decisions log populated: D001–D036.
 - Coding standard locked: NASA JPL Power of 10.
 - Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
