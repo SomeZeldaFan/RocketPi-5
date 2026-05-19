@@ -307,3 +307,45 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Alternatives considered:**
 - Lock Demo 1 as a prescriptive requirement now — rejected; Demo 1 as described in §6 may not reflect the most effective way to present the system once it is working. The constraint on the demo should be the system's real capabilities, not an upfront script.
 - Drop demos entirely — rejected; a live demonstration remains a project deliverable; only the prescriptive specification of its content is deferred.
+
+---
+
+## 2026-05-19
+
+### D038 — UAE frequency regulatory check: 433 MHz confirmed, radio band selected
+
+**Decision:** TDRA frequency allocation confirms 433 MHz is available for use in the UAE. 433 MHz is the selected band. HolyBro SiK V3 433 MHz module ordered accordingly.
+**Rationale:** Open question in constraints §5; blocker on radio selection per D028. With the regulatory finding confirmed against the TDRA frequency sheet, radio selection is unblocked and 433 MHz is the committed band.
+
+### D039 — MCU selected: STM32F407ZGT6 core board
+
+**Decision:** MCU is the STM32F407ZGT6 on a pre-assembled core board with 2.54 mm through-hole headers. H7 series evaluated and rejected in favour of F4.
+**Rationale:** F407 meets all peripheral requirements: 3× SPI with DMA, 3× I2C, 6× UART with DMA, multiple PWM timer channels, 32-bit hardware monotonic timer (TIM2), FPU, 3.3 V I/O, 1 MB flash, 192 KB RAM. H7 series was rejected on one structural ground: the Cortex-M7 D-cache requires explicit cache clean/invalidate around every SPI DMA transaction — the failure mode lands directly on the highest-frequency code path (IMU reads). The F407 has no D-cache; DMA is deterministic. F407 is the proven platform for flight-controller-class applications (original Pixhawk, Betaflight F4); 168 MHz with FPU is sufficient for EKF, FDIR, control loop, and telemetry at required loop rates.
+**Alternatives considered:**
+- STM32H743ZI Nucleo — rejected; D-cache coherency on SPI DMA adds non-trivial complexity on the critical IMU read path; overkill for this project's math load.
+- STM32H743ZI2 Nucleo — same rejection as H743ZI; additionally ~1,100 AED more expensive in UAE market with no substantive benefit.
+- STM32H745ZI-Q / H755ZI-Q (dual-core H7) — rejected; inter-core complexity with no benefit for a single-threaded real-time application.
+
+### D040 — IMU selection: GY-BMI160 (Bosch) + ICM-42688-P (TDK InvenSense)
+
+**Decision:** Two heterogeneous IMU modules: (1) GY-BMI160 breakout (Bosch BMI160) and (2) ICM-42688-P breakout (TDK InvenSense ICM-42688-P). Each on its own dedicated SPI bus. Both modules have CS, MOSI, MISO, SCLK, and interrupt pins independently accessible.
+**Rationale:** Satisfies D024 (dual heterogeneous IMUs), D026 (separate SPI buses), and D035 (raw output, no on-chip fusion). Bosch and TDK InvenSense are different silicon families — systematic failure modes are not shared, satisfying the fault-diversity requirement for FDIR. BMI160: 3200 Hz gyro ODR, 1600 Hz accel ODR, data-ready interrupt. ICM-42688-P: up to 32 kHz ODR, 0.0028 °/s/√Hz gyro noise density, data-ready interrupt. Both verified as breakout modules with all required pins accessible before selection.
+**Alternatives considered:**
+- BMI088 module (Bosch) — selected initially; became unavailable in UAE; replaced by BMI160 which meets all functional requirements.
+- ICM-42688-P bare chip (LGA-14 package) — rejected; cannot be hand-soldered; breakout module required.
+- Single IMU with redundant axis measurement — rejected; D024 locks dual heterogeneous; single silicon cannot satisfy fault-diversity requirement.
+
+### D041 — Barometer selected: MS5611 via GY-63 module
+
+**Decision:** Barometer is the MS5611-01BA03 on the GY-63 breakout module, I2C interface.
+**Rationale:** Satisfies D027 (I2C barometer). MS5611 outputs absolute pressure and temperature via 24-bit ADC. Proven in rocketry and UAV applications. GY-63 exposes all required pins; PS pin pulled high by default (I2C mode). UAE-procurable.
+**Alternatives considered:**
+- BMP388 — capable; MS5611 selected on availability and established rocketry use.
+- BMP280 — lower resolution; rejected in favour of MS5611.
+
+### D042 — Radio selected: HolyBro SiK Telemetry Radio V3, 433 MHz
+
+**Decision:** HolyBro SiK V3 pair, 433 MHz, 100 mW. Air module → MCU UART. Ground module → ground station Pi via USB. Operates as transparent serial bridge.
+**Rationale:** Satisfies D028 (radio to MCU via UART+DMA), D029 (dual MCU↔Pi links), D020 (bidirectional telemetry). 433 MHz UAE-legal per D038. SiK transparent serial imposes no proprietary framing on the application layer. UART is DMA-compatible. Matched pair eliminates RF tuning and antenna matching work. 100 mW at 433 MHz is more than sufficient for bench demo range.
+**Alternatives considered:**
+- Bare LoRa module (SX1276) — more configurable but requires manual RF bring-up and antenna matching; SiK V3 is a proven matched pair with open firmware.
