@@ -1,8 +1,8 @@
 # Project Constraints & Context
 
-**Version:** v0.8 (locked — supersedes v0.7)
-**Last updated:** 2026-05-15
-**Status:** Phase 0 complete. Phase 1 architecture review locked (D024–D034).
+**Version:** v0.9 (locked — supersedes v0.8)
+**Last updated:** 2026-05-19
+**Status:** Phase 0 complete. Phase 1 architecture review locked (D024–D034). Hardware selection complete (D038–D042).
 
 ---
 
@@ -20,8 +20,6 @@ This is a *founding statement*, not a specification. Specifications are downstre
 - **Current program professor** — issued the Pi 5 kit; expects a completed deliverable. Scope and documentation must be legible to a software engineering background.
 - **UAE aerospace and defense industry** — secondary audience for whom fault-tolerant GNC and GPS-denied operation analogues are directly relevant.
 - **The builder** — technical growth and genuine understanding are first-class outcomes, not side effects.
-
-**Implication:** the project engages at least one genuine aerospace concern at depth, not as a cosmetic framing over a generic embedded project. Domain authenticity is non-negotiable.
 
 ---
 
@@ -42,23 +40,13 @@ Raspberry Pi 5 kit: Pi 5, breadboard, LCD display, starter kit components, power
 
 Additional sensors, microcontrollers, flight controllers, RF modules, mounting structures, 3D-printed parts, etc., all in scope subject to budget.
 
-### 3.4 Skills acquirable
+### 3.4 Budget
 
-3D printing, soldering, CAD, control theory, sensor fusion, embedded development — all in scope to learn during the project.
-
-### 3.5 Budget
-
-Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed in 3.2). Contributions from monthly stipend (~AED1,000/month available) plus possible family contribution. Not a hard cap; specific expenditures justified case-by-case.
-
-### 3.6 Workspace
-
-- **Primary:** home.
-- **Outdoor:** available.
-- **Institutional:** Polytechnic labs potentially accessible (3D printing, CNC, electronics test equipment) via managing director. *Action: pursue formal access for project endorsement and lab use.*
+Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed in 3.2). Not a hard cap; specific expenditures justified case-by-case.
 
 ---
 
-## 4. Project Shape (LOCKED)
+## 4. Project Shape
 
 **Bench-only model rocketry GNC suite, avionics- and systems-centric, with high-fidelity simulation as parallel deliverable.**
 
@@ -72,7 +60,7 @@ A separate flight-critical microcontroller (likely STM32-class, decided in Phase
 
 ---
 
-## 5. Depth Axis (LOCKED): Fault-Tolerant Graceful Degradation
+## 5. Depth Axis: Fault-Tolerant Graceful Degradation
 
 Beyond nominal closed-loop control, the system demonstrates **robust operation under deliberate sensor compromise.**
 
@@ -102,11 +90,7 @@ This direction is selected because:
 
 Live demonstration of control surfaces responding to physical perturbation of the test stand. Includes nominal operation and live demonstration of fault tolerance: disconnect a sensor mid-operation, watch the estimator degrade gracefully and report sensor health.
 
-### Demo 2 — DROPPED
-
-Real flight with telemetry. Excluded because of no-flight decision.
-
-### Demo 3 — REDEFINED: High-fidelity simulation as standalone deliverable
+### Demo 2 — High-fidelity simulation
 
 RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with the actual avionics software running against simulated sensor inputs (hardware-in-the-loop). The deliverable is *not* simulation-vs-actual comparison (no actual flight data exists), but rather: simulated flight envelope, expected vehicle behavior, predicted control system performance, and stress-test results under simulated sensor failures during flight regimes.
 
@@ -183,13 +167,8 @@ All control-path and flight-critical code abides by the NASA JPL Power of 10 rul
 
 ## 11. Open Questions
 
-These are unresolved. They'll be answered when the project reaches them.
-
-1. **Specific microcontroller choice.** STM32, Teensy, RP2040 all candidates. Selection depends on PWM channel needs, sensor interface needs, ecosystem maturity for safety-critical patterns. *Trade space now bounded by D025/D026/D028/D029/D034: ≥1 SPI peripheral with at least 2 chip-selects accessible, ≥1 I2C peripheral, ≥4 PWM channels, ≥2 UARTs with DMA, hardware monotonic timer, and compute headroom for dual-IMU fusion + FDIR + control law at 200+ Hz. STM32F4-class and above remain candidates; smaller targets ruled out.*
-2. **Specific IMU and barometer selection.** BNO055 (with on-chip fusion — less educational but easier) vs. ICM-20948/MPU9250 (raw, you implement fusion — more educational, more work). *Trade space now bounded by D024 (two heterogeneous IMUs — different chip families) and D026 (SPI-capable IMU parts; I2C barometer). Specific parts still open.*
-3. **Specific telemetry band and module.** 433 MHz vs. 868 MHz; verify license-free status in UAE.
-4. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 3). Defer until simulation scope is defined.
-5. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
+1. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 2). Defer until simulation scope is defined.
+2. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
 
 ---
 
@@ -203,3 +182,4 @@ These are unresolved. They'll be answered when the project reaches them.
 - **v0.6** (2026-05-12): Telemetry link made bidirectional; demo/flight mode toggle added to scope (D020); true C2 depth added as stretch open question.
 - **v0.7** (2026-05-12): Time constraints removed from all sections; D002 retired via D021.
 - **v0.8** (2026-05-15): Phase 1 top-level architecture review locked (D024–D034). Custom semi-monocoque 3D-printed airframe path adopted (D031); D011 retired. §8 airframe exclusion removed. §11.4 airframe-presence open question resolved. §11.1 (MCU choice) and §11.2 (IMU/baro selection) annotated with bounded trade spaces from the architecture decisions; open-question numbering shifted accordingly.
+- **v0.9** (2026-05-19): Document prose cleaned up. Renumbered §3 subsections and remaining open questions.
