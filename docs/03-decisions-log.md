@@ -349,3 +349,21 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Rationale:** Satisfies D028 (radio to MCU via UART+DMA), D029 (dual MCU↔Pi links), D020 (bidirectional telemetry). 433 MHz UAE-legal per D038. SiK transparent serial imposes no proprietary framing on the application layer. UART is DMA-compatible. Matched pair eliminates RF tuning and antenna matching work. 100 mW at 433 MHz is more than sufficient for bench demo range.
 **Alternatives considered:**
 - Bare LoRa module (SX1276) — more configurable but requires manual RF bring-up and antenna matching; SiK V3 is a proven matched pair with open firmware.
+
+---
+
+## 2026-05-20
+
+### D043 — Scheduling model: bare-metal superloop with DMA + ISRs
+
+**Decision:** MCU firmware uses a bare-metal superloop. A single main loop runs at a fixed rate enforced by TIM2 hardware timer. ISRs are minimal — DMA-complete ISRs set flags and swap double-buffer pointers; UART DMA ISRs advance ring buffer write pointers; TIM2 ISR sets the tick flag. All application logic runs in the main loop. FreeRTOS is explicitly rejected for this project.
+**Rationale:** Five reasons, each independently sufficient.
+1. JPL Power of 10 compliance (D019) is structurally satisfied — no heap, no threads, Rules 2 and 3 trivially met. With FreeRTOS, Rule 3 (no dynamic allocation) requires active enforcement rather than architectural inevitability.
+2. Deterministic dt: TIM2 fires the loop tick; dt = 1/rate ± ISR latency (~hundreds of nanoseconds). The EKF prediction step depends on consistent dt. FreeRTOS scheduler jitter adds ~1–3 μs of timing uncertainty per context switch.
+3. No new fault modes: FreeRTOS inter-task queues, semaphores, and mutexes are shared data structures that can block, overflow, or deadlock — new fault classes introduced for zero benefit in an FDIR-focused project.
+4. Single thread of execution: fault reasoning is unambiguous. One call stack, one breakpoint. No priority inversion, no deadlock.
+5. Math load is well within bare-metal headroom: EKF + FDIR + PID + telemetry at 1 kHz on F407 at 168 MHz with FPU runs in well under 500 μs per tick.
+**Alternatives considered:**
+- FreeRTOS preemptive tasks — rejected; see rationale above.
+- FreeRTOS cooperative scheduling — rejected; worst of both worlds: all RTOS complexity, no preemption benefit, harder to detect loop overrun than bare-metal.
+- Event-driven pure ISR chain — rejected; execution order non-deterministic; JPL compliance in ISRs is maximally constrained; worst-case execution time unanalyzable.
