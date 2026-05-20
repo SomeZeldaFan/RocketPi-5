@@ -1,8 +1,8 @@
 # Architecture
 
-**Status:** Hardware and structural architecture established (per D024–D034). Software, ground station, and simulation sections pending requirements.
+**Status:** Hardware and structural architecture established (D024–D034). Software architecture locked (D043, 2026-05-20). Ground station and simulation sections pending.
 **Created:** 2026-05-11
-**Last updated:** 2026-05-15
+**Last updated:** 2026-05-20
 
 This document captures the "how" of the system. Component breakdown, data flow, hardware block diagram, software module structure, interface definitions between subsystems.
 
@@ -185,24 +185,165 @@ Semi-monocoque construction adapted to FDM-printed fabrication. The printed oute
 
 ## 4. Software Architecture
 
-**Status:** Skeleton — populated alongside requirements.
+**Status:** Locked — D043. Scaffold produced 2026-05-20.
 
-Module structure is constrained by the hardware decisions (D024–D034):
+### 4.1 Software module decomposition
 
-- Sensor driver layer: one SPI driver shared between IMU-1 and IMU-2 (different chip-select lines, possibly different register maps if heterogeneous); one I2C driver for the barometer; each driver pairs every reading with an MCU timestamp.
-- State estimator: consumes dual-IMU + baro; designed from day one to operate with widened uncertainty bounds on any single channel.
-- FDIR module: per-sensor health channels, innovation gating between IMU-1 and IMU-2, cross-modal check between integrated inertial altitude and barometric altitude, actuator health channels with mixing-matrix reconfiguration on detected actuator fault.
-- Control law: produces desired pitch/yaw/roll moments; control allocator maps moments to fin deflections through the current (possibly reconfigured) mixing matrix.
-- Mode FSM: explicit states for demo/flight mode (per D020) and nominal/degraded/safe operation; transitions logged and telemetered.
-- Transport layer: abstraction over radio UART and wired UART/USB; same protocol on both.
-- Telemetry framing layer: packet format, CRC, MCU-timestamp header.
-- Command dispatch layer: receives validated commands; routes to mode FSM.
+The avionics firmware is decomposed into 12 C modules plus one shared type header. Module boundaries are enforced by the header interface — internal implementation is file-private (static). No module reaches into another module's internal state. Directory structure mirrors the layer hierarchy: a file's folder determines its layer, not its name.
 
-### 4.1 Module breakdown
-### 4.2 Interfaces between modules
-### 4.3 Data flow
-### 4.4 Threading / scheduling model
-### 4.5 Error handling and fault propagation paths
+Layers (bottom to top):
+
+| Module | Files | Layer | Responsibility |
+|---|---|---|---|
+| Shared types | `avionics_types.h` | — | All shared structs and enums. Depends only on stdint.h / stdbool.h |
+| Platform | `hardware/platform.c/h` | Hardware | MCU clock config, peripheral init, IWDG watchdog, TIM2 |
+| IMU-1 driver | `hardware/bmi160.c/h` | Hardware | BMI160 SPI read, raw→SI scaling, TIM2 timestamp |
+| IMU-2 driver | `hardware/icm42688p.c/h` | Hardware | ICM-42688-P SPI read, raw→SI scaling, TIM2 timestamp |
+| Barometer | `hardware/ms5611.c/h` | Hardware | MS5611 I2C read, pressure compensation, altitude derivation |
+| Radio driver | `hardware/sik_radio.c/h` | Hardware | UART+DMA ring buffer, raw byte RX/TX — no protocol logic |
+| ISR handlers | `hardware/stm32f4xx_it.c` | Hardware | HAL ISR callbacks: SPI DMA TC, I2C DMA TC, UART DMA RX, TIM2 |
+| MSP init | `hardware/stm32f4xx_hal_msp.c` | Hardware | HAL peripheral clock, GPIO, DMA configuration callbacks |
+| FDIR | `algorithm/fdir.c/h` | Algorithm | Staleness watchdog, bounds check, innovation gate, health flags |
+| Estimator | `algorithm/estimator.c/h` | Algorithm | EKF predict+update, degraded mode management, covariance |
+| Control law | `algorithm/control_law.c/h` | Algorithm | Attitude error → deflection commands, reconfigurable mixing matrix |
+| Actuators | `output/actuators.c/h` | Output | Deflection → PWM registers, hard clamp, safe-state command |
+| Telemetry | `output/telemetry.c/h` | Output (TX) | Downlink only: frame packing, CRC-16, dispatch to radio driver |
+| C2 | `output/c2.c/h` | Output (RX) | Uplink only: drain RX ring buffer, CRC validate, parse command frames |
+| Mode FSM | `orchestration/mode_fsm.c/h` | Orchestration | System mode (flight/demo/safe), C2 command dispatch, mode ack |
+
+### 4.2 Scheduling model
+
+Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the control loop rate (rate TBD pending LR-1; nominal 500–1000 Hz). The main loop waits on the tick flag, then executes the full pipeline in deterministic sequence every tick.
+
+**Main loop tick sequence:**
+
+```
+[1]  bmi160_read()              — consume IMU-1 DMA buffer, attach TIM2 timestamp
+[2]  icm42688p_read()           — consume IMU-2 DMA buffer, attach TIM2 timestamp
+[3]  ms5611_service()           — barometer: poll every N ticks (~50 Hz, decimated internally)
+[4]  fdir_update()              — staleness check, bounds check, innovation gate → health_flags
+[5]  estimator_update()         — EKF predict+update; NULL pointers for isolated sensors
+[6]  control_law_update()       — attitude error → fin deflection commands
+[7]  actuators_write()          — deflection → PWM registers (hard-clamped to mode limits)
+[8]  telemetry_pack_and_send()  — pack downlink frame, CRC-16, queue to SiK DMA TX
+[9]  c2_receive()               — drain RX ring buffer, CRC validate, parse → command_frame_t
+[10] mode_fsm_update()          — consume parsed C2 command, update system mode, queue ack
+[11] platform_watchdog_kick()   — MCU IWDG hardware watchdog
+[12] tick_wait()                — spin until TIM2 sets tick flag
+```
+
+**ISR responsibilities — flag-set only, never more than ~10 lines:**
+
+| ISR | Action | Forbidden |
+|---|---|---|
+| SPI1 DMA TC (IMU-1) | Set `imu1_data_ready`, swap double-buffer pointer | No math, no application calls |
+| SPI2 DMA TC (IMU-2) | Set `imu2_data_ready`, swap double-buffer pointer | No math, no application calls |
+| I2C DMA TC (baro) | Set `baro_data_ready` | No math, no application calls |
+| UART1 DMA RX (radio) | Advance RX ring buffer write pointer | No math, no application calls |
+| TIM2 update | Set `tick_flag` | No math, no application calls |
+
+**`volatile` discipline:** every variable shared between an ISR and the main loop is declared `volatile_flag_t` (see §4.3). Without `volatile`, the compiler may cache the value in a register and the main loop will never observe the ISR's write. All ISR-shared variables are enumerated in `isr_flags.h` — that file is the authoritative manifest of every ISR/main-loop boundary crossing.
+
+**Overrun detection:** TIM2 is sampled at loop entry. If elapsed since the previous tick exceeds the loop period, an assert fires and the system halts. Overrun is never silent.
+
+**Watchdog during init:** IWDG is started inside `platform_init()` before any peripheral init begins, with a timeout of ~2–4 s covering the full init sequence. Each module's `_init()` calls `platform_watchdog_kick()` on completion — a hung peripheral init resets the MCU rather than hanging forever. In steady-state the main loop kicks the watchdog every ~1 ms, well within the timeout.
+
+### 4.3 Canonical data types
+
+All types shared between modules are defined in `avionics_types.h`. No module defines public types outside this file. Depends only on `<stdint.h>` and `<stdbool.h>`.
+
+**ISR-shared flag type:**
+- `volatile_flag_t` — `typedef volatile uint8_t volatile_flag_t`. Any variable of this type crosses the ISR/main-loop boundary. Self-documenting by type name.
+
+**Protocol version:**
+- `AVIONICS_PROTOCOL_VERSION` — `uint8_t` constant, increment on any frame layout change. First field in both `telemetry_frame_t` and `command_frame_t` so the GCS detects mismatches at runtime before bad data propagates.
+
+**Status enums:**
+- `imu_status_t`: `IMU_OK`, `IMU_BUS_ERROR`, `IMU_TIMEOUT`, `IMU_STALE_DATA`, `IMU_OUT_OF_RANGE`, `IMU_ISOLATED`
+- `baro_status_t`: `BARO_OK`, `BARO_BUS_ERROR`, `BARO_TIMEOUT`, `BARO_STALE_DATA`, `BARO_OUT_OF_RANGE`, `BARO_ISOLATED`
+- `estimator_mode_t`: `EST_MODE_DUAL_IMU`, `EST_MODE_IMU1_ONLY`, `EST_MODE_IMU2_ONLY`, `EST_MODE_DEAD_RECKONING`, `EST_MODE_FAULT`
+- `control_mode_t`: `CTL_MODE_FULL_AUTHORITY`, `CTL_MODE_3FIN_REDUCED`, `CTL_MODE_2FIN_REDUCED`, `CTL_MODE_SAFE_HOLD`
+- `system_mode_t`: `SYS_MODE_FLIGHT`, `SYS_MODE_DEMO`, `SYS_MODE_SAFE_HOLD`
+- `command_id_t`: `CMD_SET_MODE_FLIGHT`, `CMD_SET_MODE_DEMO`, `CMD_SET_MODE_SAFE_HOLD`, `CMD_ACK_REQUEST`, `CMD_RESET_ESTIMATOR`
+
+**Data structs:**
+- `imu_reading_t`: `accel_mss[3]`, `gyro_rads[3]`, `timestamp_us`, `status`
+- `baro_reading_t`: `pressure_pa`, `temperature_c`, `altitude_m`, `timestamp_us`, `status`
+- `fdir_gate_result_t`: `chi2_imu1`, `chi2_imu2`, `imu1_gate_open`, `imu2_gate_open`, `imu1_stale_us`, `imu2_stale_us`
+- `health_flags_t`: `imu1_healthy`, `imu2_healthy`, `baro_healthy`, `actuator_healthy[4]`, `radio_healthy`, `wired_healthy`
+- `attitude_estimate_t`: `roll_rad`, `pitch_rad`, `yaw_rad`, `roll_rate_rads`, `pitch_rate_rads`, `yaw_rate_rads`, `covariance[6]`, `mode`, `timestamp_us`
+- `actuator_cmd_t`: `deflection_rad[4]`, `timestamp_us`, `mode`
+- `telemetry_frame_t`: `protocol_version`, `frame_id`, `timestamp_us`, `imu1`, `imu2`, `baro`, `estimate`, `actuators`, `health`, `sys_mode`, `crc16`
+- `command_frame_t`: `protocol_version`, `cmd_seq`, `command`, `timestamp_us`, `crc16`
+
+**TBD constants** (pending literature reviews):
+- `AVIONICS_LOOP_RATE_HZ` — TBD, LR-1
+- `IMU_STALENESS_THRESHOLD_US` — TBD, LR-1 (nominal: 5 × sample interval)
+- `CHI2_THRESHOLD_2DOF` — TBD, LR-3
+- `AVIONICS_BARO_RATE_HZ` — fixed at 50
+
+### 4.4 Fault propagation chain
+
+**Guarantee: no fault is swallowed, no fault produces undefined behavior.**
+
+```
+Sensor driver
+  └─ imu_reading_t.status       ← bus errors, timeouts, range violations
+  └─ imu_reading_t.timestamp_us ← staleness source for FDIR watchdog
+        ↓
+FDIR module
+  └─ health_flags_t             ← authoritative per-channel health
+  └─ fdir_gate_result_t         ← chi² values, gate open/closed, stale durations
+        ↓
+Estimator
+  └─ attitude_estimate_t.mode   ← DUAL_IMU → IMU1_ONLY → IMU2_ONLY → DEAD_RECKONING
+  └─ attitude_estimate_t.covariance ← grows as sensors are lost; confidence made numeric
+        ↓
+Control law
+  └─ actuator_cmd_t.mode        ← FULL_AUTHORITY → 3FIN_REDUCED → 2FIN_REDUCED → SAFE_HOLD
+        ↓
+Telemetry (every downlink frame)
+  └─ telemetry_frame_t carries health_flags, estimate.mode, actuators.mode, all sensor readings
+        ↓
+Ground station dashboard
+  └─ sensor health panel, estimator mode indicator, covariance display, fin deflection view
+```
+
+**Invariants:**
+1. FDIR sets health flags. Estimator reads them. Estimator never sets health flags. No module crosses this boundary.
+2. An isolated sensor is passed as NULL to the estimator — not as zeroed data. NULL is unambiguous; zeroed data is not.
+3. `attitude_estimate_t.covariance` is mandatory in every output — a consumer that ignores it ignores the system's self-reported confidence. Absence of covariance propagation is a reviewer finding.
+4. `telemetry_frame_t` carries `health_flags_t` unconditionally — health state is never omitted from a downlink frame.
+
+### 4.5 Module interface contracts
+
+**platform:** `platform_init()` — starts IWDG first, then configures clocks and peripherals. `platform_timer_us()` — reads TIM2, the authoritative time source (D034). `platform_watchdog_kick()` — callable from module init functions and main loop tick [11].
+
+**bmi160 / icm42688p:** `_init()`, `_read(imu_reading_t *out) → imu_status_t`. Caller checks status before using data.
+
+**ms5611:** `_init()`, `_service(baro_reading_t *out) → baro_status_t`. Decimated; driver manages I2C state machine across calls.
+
+**sik_radio:** `_init()`, `_rx_pending() → bool`, `_rx_read(command_frame_t *out) → bool`, `_tx_send(const telemetry_frame_t *frame) → bool`. Raw byte transport only — no protocol logic.
+
+**fdir:** `_init()`. `_update()` signature **intentionally incomplete** — FDIR/estimator boundary resolution required before implementation. See open task in `02-current-state.md`. Do not implement against the current stub signature.
+
+**estimator:** `_init()`, `_reset()` for HIL replay. `_predict()` and `_update()` signatures **intentionally incomplete** — same boundary task. See open task. Do not implement against current stub signatures.
+
+**control_law:** `_init()`, `_update(est, health, sys_mode, out) → control_mode_t`. Reconfigures mixing matrix based on `health.actuator_healthy[4]`.
+
+**actuators:** `_init()`, `_write(const actuator_cmd_t *cmd)` — hard-clamps to mode limits before writing PWM. `_safe()` drives all fins to zero deflection.
+
+**mode_fsm:** `_init()`, `_update(const command_frame_t *cmd, const health_flags_t *health) → system_mode_t`. `cmd` may be NULL if no frame received this tick.
+
+**telemetry:** `_init()`, `_pack_and_send(imu1, imu2, baro, est, act, health, mode)`. Downlink only. Packs `telemetry_frame_t`, computes CRC-16/CCITT, calls `sik_radio_tx_send()`.
+
+**c2:** `_init()`, `_receive(command_frame_t *out) → bool`. Uplink only. Drains SiK RX ring buffer, validates CRC, deserialises one `command_frame_t`. Returns false if no complete valid frame this tick. Never touches TX.
+
+### 4.6 Test harness strategy
+
+Algorithm modules (estimator, FDIR, control_law) are exercised on the dev PC without hardware. The `avionics/test/` directory contains dev-PC entry points. `test_main.c` replaces `main.c` for test builds, feeding synthetic or recorded `imu_reading_t` / `baro_reading_t` structs directly into the algorithm pipeline.
+
+This is possible because algorithm module inputs are data structs, not hardware registers. The hardware abstraction is complete — no algorithm module calls a sensor driver function directly.
 
 ---
 
