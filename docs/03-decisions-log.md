@@ -367,3 +367,14 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 - FreeRTOS preemptive tasks — rejected; see rationale above.
 - FreeRTOS cooperative scheduling — rejected; worst of both worlds: all RTOS complexity, no preemption benefit, harder to detect loop overrun than bare-metal.
 - Event-driven pure ISR chain — rejected; execution order non-deterministic; JPL compliance in ISRs is maximally constrained; worst-case execution time unanalyzable.
+
+---
+
+## 2026-05-21
+
+### D044 — Airframe structural reinforcement boundary revised: chemical exclusions confirmed, mechanical reinforcements open
+
+**Decision:** No resin, fibreglass, chemical coatings, or fibrous post-print reinforcement of any kind. Metal linkages (brackets, inserts, rods) for structural reinforcement are explicitly in scope and under consideration. D031's "FDM-print-only" boundary is amended on this point.
+**Rationale:** D031 was written before detailed structural design began. As CAD work approaches, metal linkages are a practical and common technique for reinforcing 3D-printed structures at joint and load points — excluding them prematurely would constrain the structural design without engineering justification. Chemical reinforcements (resin, fibreglass, epoxy) remain excluded on complexity and process grounds.
+**Alternatives considered:**
+- Reaffirm D031's FDM-only scope — rejected; unnecessarily forecloses a standard fabrication technique before structural loads are characterized.
