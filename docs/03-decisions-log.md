@@ -393,3 +393,12 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 ### D046 — Actuator fault detection mechanism
 
 Standard hobby servos have no feedback wire to the MCU. The servo control loop is entirely internal. No return path exists. Decision: `actuator_healthy[i]` is operator-asserted via GCS command, not autonomously detected. Rationale: per-servo current sensing would require additional BOM hardware, ADC channels, and threshold calibration with uncertain reliability given variable servo current draw under different load conditions. The architectural value of degraded control modes is preserved — the control law correctly reconfigures when health flags are set. The limitation is in the detection trigger, not the response. Honest system claim: the system handles actuator faults correctly when informed of them. It cannot autonomously detect them.
+
+### D047 — Loop overrun policy: warn on transient, halt on sustained
+
+**Decision:** A single transient main-loop overrun does not halt the system. On a detected overrun (the tick flag is already set when the next tick begins) the MCU increments a consecutive-overrun counter and emits a warning in the telemetry frame via an `overrun_count` field. **3 consecutive** overruns trigger assert-halt and `actuators_safe()`. The consecutive counter resets to zero on any on-time tick.
+**Rationale:** A one-off interrupt storm or thermal spike must not permanently halt a demo and force a power cycle. But ~3 ms of sustained real-time failure (at a 1 kHz loop rate) is the limit before the control loop is meaningfully broken — tolerance must be short because control is already degraded during any overrun. Three consecutive overruns is the balance: it rides through a single transient glitch and reacts fast to genuine sustained failure.
+**Alternatives considered:**
+- Halt on first overrun — rejected; too aggressive, transient-fragile, turns a recoverable glitch into a demo-ending event.
+- Silently tolerate overruns — rejected; breaks the real-time guarantee with no signal to the operator.
+- Windowed counter (N overruns within a sliding window) — rejected for now; consecutive counting is simpler to implement and analyse, and a genuine sustained fault trips it just as fast.
