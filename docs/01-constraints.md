@@ -1,8 +1,8 @@
 # Project Constraints & Context
 
-**Version:** v0.9 (locked — supersedes v0.8)
-**Last updated:** 2026-05-19
-**Status:** Phase 0 complete. Phase 1 architecture review locked (D024–D034). Hardware selection complete (D038–D042).
+**Version:** v1.0 (locked — supersedes v0.9)
+**Last updated:** 2026-05-21
+**Status:** Phase 0 complete. Phase 1 complete — architecture locked (D024–D034), hardware selected (D038–D042), coding framework complete (D043).
 
 ---
 
@@ -52,11 +52,11 @@ Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed
 
 The system is built to operational completeness on a test stand — IMU, sensor fusion, state estimation, control law, servo-driven aerodynamic control surfaces, ground station — but is **not flown**. Flight is excluded for procurement, regulatory, and logistical reasons (see §5).
 
-The airframe (if used) is a commercial mid-power kit, modified to integrate the avionics bay and control surfaces. The airframe is the *vehicle for the engineering*, not the focus of it.
+The airframe is a custom-designed, 3D-printed semi-monocoque structure — a parallel structural engineering chapter of the project, not packaging. No resin, fibreglass, chemical coatings, or fibrous reinforcement of any kind. Structural reinforcement strategy (including possible metal linkages) is open. (D031, retires D011; D044 opens reinforcement boundary.)
 
-The Pi 5 serves as ground station and possibly companion computer (specific role decided in Phase 1).
+The Pi 5 is bounded to: telemetry reception, frame logging, dashboard UI, and C2 command transmission. It is not in the real-time control path. (D032.)
 
-A separate flight-critical microcontroller (likely STM32-class, decided in Phase 1) owns the real-time control loop.
+A dedicated STM32F407ZGT6 MCU owns the entire real-time path: sensor read, sensor fusion, FDIR, control law, actuator command, mode FSM, and time authority. (D039, D025.)
 
 ---
 
@@ -183,3 +183,4 @@ All control-path and flight-critical code abides by the NASA JPL Power of 10 rul
 - **v0.7** (2026-05-12): Time constraints removed from all sections; D002 retired via D021.
 - **v0.8** (2026-05-15): Phase 1 top-level architecture review locked (D024–D034). Custom semi-monocoque 3D-printed airframe path adopted (D031); D011 retired. §8 airframe exclusion removed. §11.4 airframe-presence open question resolved. §11.1 (MCU choice) and §11.2 (IMU/baro selection) annotated with bounded trade spaces from the architecture decisions; open-question numbering shifted accordingly.
 - **v0.9** (2026-05-19): Document prose cleaned up. Renumbered §3 subsections and remaining open questions.
+- **v1.0** (2026-05-21): §4 updated to reflect Phase 1 locked decisions — custom semi-monocoque airframe (D031), Pi 5 role (D032), MCU selection (D039). D044 opens airframe reinforcement boundary.
