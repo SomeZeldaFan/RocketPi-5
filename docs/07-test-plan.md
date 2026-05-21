@@ -846,10 +846,10 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
-> **TEST-CTL-010 — Closed-loop stability on bench-gimbal plant model**
+> **TEST-CTL-010 — Closed-loop stability on free-body vehicle dynamics plant model**
 > *Purpose:* The control law is actually stable with the expected vehicle dynamics.
 > *Linked requirement(s):* REQ-CTL-003, REQ-CTL-004 (from LR-4).
-> *Procedure:* Implement a simplified bench-gimbal plant model from LR-4 inertia estimates; close the loop on the dev PC; apply a 10° step.
+> *Procedure:* Implement a simplified free-body vehicle dynamics plant model from LR-4 inertia estimates; close the loop on the dev PC; apply a 10° step.
 > *Acceptance criteria:* Step response settles within the REQ-CTL-004 bound without oscillation; gain margin > 6 dB, phase margin > 45° from the Bode plot.
 > *Apparatus:* Dev PC, Python simulation using the LR-4 plant model.
 > *Execution log:* Not yet run. NOTE — depends on LR-4.
@@ -1280,7 +1280,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-STR-004 — Full airframe static load test**
 > *Purpose:* Validate the assembled airframe withstands the bench load envelope with margin.
 > *Linked requirement(s):* D031; load envelope from LR-4.
-> *Procedure:* Apply the rated perturbation force (from LR-4) + 2× safety factor at the gimbal mount and at the fin attachment points.
+> *Procedure:* Apply the rated perturbation force (from LR-4) + 2× safety factor at the airframe body (representative of hand-held handling loads) and at the fin attachment points.
 > *Acceptance criteria:* Zero permanent deformation, zero cracking, zero joint loosening.
 > *Apparatus:* Assembled airframe, calibrated force applicator, calipers.
 > *Execution log:* Not yet run.
@@ -1372,7 +1372,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-GCS-004 — 3D attitude visualisation tracks estimator output**
 > *Purpose:* The 3D body view correctly reflects estimator output.
 > *Linked requirement(s):* Constraints §7.
-> *Procedure:* Rotate the article by hand on the gimbal; observe the 3D visualization.
+> *Procedure:* Rotate the article by hand; observe the 3D visualization.
 > *Acceptance criteria:* The 3D body moves in correspondence; lag ≤ 200 ms; rotation axes correct (not mirrored or transposed).
 > *Apparatus:* Full hardware setup, GCS.
 > *Execution log:* Not yet run.

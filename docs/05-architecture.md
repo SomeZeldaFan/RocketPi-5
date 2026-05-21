@@ -22,7 +22,7 @@ The architecture is designed to support fault tolerance from day one (see Constr
 
 Three operational nodes and one offline node:
 
-**Test stand (bench).** The custom semi-monocoque airframe (per §3) mounted on a gimbal/pivot, housing the avionics bay. The airframe is a deliberate structural engineering deliverable — not packaging.
+**Test stand (bench).** The custom semi-monocoque airframe (per §3), housing the avionics bay. Hand-held or bench-rested during demo operation. The airframe is a deliberate structural engineering deliverable — not packaging.
 
 **Avionics bay (inside airframe).** MCU, dual heterogeneous IMUs, barometer, radio module, four servos driving four independently-actuated fins. The MCU owns the entire real-time path: sensor read, fusion, FDIR, control law, actuator command, mode FSM, and time authority. Nothing running on Linux is in the control loop (per D025).
 
@@ -147,7 +147,7 @@ The airframe is a custom-designed, 3D-printed semi-monocoque structure, treated 
 
 ### 3.1 Design philosophy
 
-Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by printed-in internal frames and longitudinal stringers integrated into the same print model. Load envelope is bench-only — self-weight under gimbal mounting, perturbation forces during demos (tens of newtons peak), servo reaction forces on fin pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements.
+Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by printed-in internal frames and longitudinal stringers integrated into the same print model. Load envelope is bench-only — self-weight, perturbation forces during demos (tens of newtons peak), servo reaction forces on fin pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements.
 
 ### 3.2 Skin / frame / stringer layout
 
@@ -165,19 +165,15 @@ Semi-monocoque construction adapted to FDM-printed fabrication. The printed oute
 
 *To be populated during airframe CAD work. Four fin pivots integrated into the airframe structure; servo mounting brackets printed into the body adjacent to the fin hinge points; servo linkages designed in.*
 
-### 3.6 Gimbal mount integration
-
-*To be populated during airframe CAD work. Gimbal mount printed into the airframe near the center of mass; gimbal choice (2-axis pitch+yaw vs. 3-axis full) deferred.*
-
-### 3.7 Material selection and print strategy
+### 3.6 Material selection and print strategy
 
 *To be populated. Trade space: filament family (PETG / ABS / ASA / CF-filled PLA or PETG); wall thickness and perimeter count; infill density and pattern; print orientation relative to expected load axes; printed-in reinforcement features (ribs, fillets, gussets). Material choice driven by coupon testing per §3.9.* **No fibrous layup or epoxy work.**
 
-### 3.8 Fabrication process
+### 3.7 Fabrication process
 
 *To be populated. Workflow from CAD model → slicer settings → print → post-processing (support removal, dimensional verification) → assembly. Iteration discipline (design freeze after one or two revisions) is a guardrail flagged in the risk register.*
 
-### 3.9 Structural analysis and validation
+### 3.8 Structural analysis and validation
 
 *To be populated. Hand calculations on the dominant load paths at minimum; FEA optional (Fusion 360's built-in FEA module is a candidate tool). Validation via coupon testing in candidate materials/orientations/infill patterns before committing to a full airframe print; full-airframe load testing post-fabrication.*
 
@@ -369,4 +365,4 @@ Mass properties for the simulated rocket are derived directly from the airframe 
 
 **Status:** Skeleton — populated alongside requirements.
 
-Each interface in §2.8 generates integration test requirements. Each architectural boundary in §2.9 generates boundary test requirements. The avionics ↔ airframe integration boundary (sensor mount alignment, servo bracket fit, cable routing, gimbal alignment) generates mechanical integration test requirements.
+Each interface in §2.8 generates integration test requirements. Each architectural boundary in §2.9 generates boundary test requirements. The avionics ↔ airframe integration boundary (sensor mount alignment, servo bracket fit, cable routing) generates mechanical integration test requirements.

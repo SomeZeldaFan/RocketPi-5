@@ -44,7 +44,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 
 - **Literature reviews LR-2 and LR-3.** Now unblocked by D040. LR-2: MEMS IMU estimation accuracy — run against BMI160 and ICM-42688-P datasheets (noise density, Allan deviation, bias instability); produces steady-state EKF error bound in degrees. LR-3: FDIR innovation gating — requires LR-1 result and IMU noise specs; chi-squared threshold and detection latency.
 - **Per-module header scrutiny sessions.** With the scaffold in place, each module header gets its own dedicated session to scrutinise the interface contract, type-check signatures against the fault propagation invariants, and lock the safe default returns currently marked as PLACEHOLDER. Headers do not move from scaffold to implementation-ready until they pass their scrutiny session.
-- **Airframe: structural design.** Begin CAD work — first-pass body geometry, avionics bay (dimensioned to selected components), fin pivot locations, gimbal mount integration. Material/print-parameter coupon testing to follow before committing to full airframe prints.
+- **Airframe: structural design.** Begin CAD work — first-pass body geometry, avionics bay (dimensioned to selected components), fin pivot locations. Material/print-parameter coupon testing to follow before committing to full airframe prints.
 - **Pi 5 bring-up: VS Code Remote-SSH.** Final bring-up item — connect VS Code on dev laptop to Pi via Remote-SSH extension. Deferred from 2026-05-16 session.
 
 ### Literature review tasks — required before TBD requirements can be committed
@@ -52,7 +52,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 These tasks must be completed before the indicated requirements in docs/04-requirements.md can have their numerical values set. Each produces a written summary and a justified number recommendation. **Sequencing matters — see dependency notes.**
 
 - **LR-1 — Control loop rate** *(unblocks REQ-SYS-011, REQ-EST-002, REQ-CTL-008)*
-  Independent — can run now, no hardware dependency. Sampling theory applied to control systems. Determine the expected closed-loop bandwidth of a fin-stabilised rocket body on a bench gimbal. Derive the minimum control loop rate from that bandwidth using the Nyquist criterion and engineering margin. Produce a justified Hz recommendation.
+  Independent — can run now, no hardware dependency. Sampling theory applied to control systems. Determine the expected closed-loop bandwidth of a fin-stabilised rocket body under manual perturbation. Derive the minimum control loop rate from that bandwidth using the Nyquist criterion and engineering margin. Produce a justified Hz recommendation.
 
 - **LR-2 — MEMS IMU estimation accuracy** *(unblocks REQ-EST-006, REQ-CTL-007)*
   **Requires IMU selection first.** Runs on real datasheet noise specs (noise density, Allan deviation, bias instability) for the selected chips — not class-level estimates. Determine what steady-state attitude accuracy is achievable with the chosen dual-IMU EKF configuration. Produce a justified RMS error bound in degrees.
@@ -94,7 +94,7 @@ Nothing blocked.
 5. **LR-1 — Control loop rate** — independent of hardware; runs now. Produces a justified Hz recommendation to commit into REQ-SYS-011 and `AVIONICS_LOOP_RATE_HZ` in `avionics_types.h`.
 6. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
 7. **LR-3 — FDIR innovation gating** — unblocked by D040; requires LR-1 first. Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
-8. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations, gimbal mount integration. Unlocks LR-4. Run material coupon prints as structural design firms up.
+8. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Unlocks LR-4. Run material coupon prints as structural design firms up.
 9. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
 10. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
 11. **Servo finalisation** — after LR-4 and CAD provide torque and size requirements.
