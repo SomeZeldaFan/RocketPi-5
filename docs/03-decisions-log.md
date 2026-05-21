@@ -389,3 +389,7 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Alternatives considered:**
 - Test after implementation — rejected; produces tests that confirm the code rather than the contract.
 - Informal/ad-hoc testing without a gate structure — rejected; "validated" becomes unfalsifiable, and the order of bring-up (dev-PC before flash, peripheral before integration) is exactly the discipline that catches faults cheaply.
+
+### D046 — Actuator fault detection mechanism
+
+Standard hobby servos have no feedback wire to the MCU. The servo control loop is entirely internal. No return path exists. Decision: `actuator_healthy[i]` is operator-asserted via GCS command, not autonomously detected. Rationale: per-servo current sensing would require additional BOM hardware, ADC channels, and threshold calibration with uncertain reliability given variable servo current draw under different load conditions. The architectural value of degraded control modes is preserved — the control law correctly reconfigures when health flags are set. The limitation is in the detection trigger, not the response. Honest system claim: the system handles actuator faults correctly when informed of them. It cannot autonomously detect them.
