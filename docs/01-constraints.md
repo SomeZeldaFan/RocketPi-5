@@ -1,8 +1,8 @@
 # Project Constraints & Context
 
-**Version:** v1.0 (locked — supersedes v0.9)
+**Version:** v1.1 (locked — supersedes v1.0)
 **Last updated:** 2026-05-21
-**Status:** Phase 0 complete. Phase 1 complete — architecture locked (D024–D034), hardware selected (D038–D042), coding framework complete (D043).
+**Status:** Phase 0 complete. Phase 1 complete — architecture locked (D024–D034), hardware selected (D038–D042), coding framework complete (D043). Validation protocol locked (D045, §10.7).
 
 ---
 
@@ -163,6 +163,10 @@ When regulatory questions arise, the regulator (or its published rules) is the s
 
 All control-path and flight-critical code abides by the NASA JPL Power of 10 rules. This is a non-negotiable quality floor, not a stretch goal.
 
+### 10.7 Validation before implementation — tests are written before code
+
+No code is flashed to hardware until it has passed its full dev-PC validation suite. No subsystem integration begins until per-peripheral bring-up tests pass. Tests are written before the module they test is implemented — a test written after the code confirms the code as written; a test written against the contract verifies the contract. Progression follows a non-bypassable gate structure (see `docs/07-test-plan.md`); a test that has not been run counts as a failing test. (D045.)
+
 ---
 
 ## 11. Open Questions
@@ -184,3 +188,4 @@ All control-path and flight-critical code abides by the NASA JPL Power of 10 rul
 - **v0.8** (2026-05-15): Phase 1 top-level architecture review locked (D024–D034). Custom semi-monocoque 3D-printed airframe path adopted (D031); D011 retired. §8 airframe exclusion removed. §11.4 airframe-presence open question resolved. §11.1 (MCU choice) and §11.2 (IMU/baro selection) annotated with bounded trade spaces from the architecture decisions; open-question numbering shifted accordingly.
 - **v0.9** (2026-05-19): Document prose cleaned up. Renumbered §3 subsections and remaining open questions.
 - **v1.0** (2026-05-21): §4 updated to reflect Phase 1 locked decisions — custom semi-monocoque airframe (D031), Pi 5 role (D032), MCU selection (D039). D044 opens airframe reinforcement boundary.
+- **v1.1** (2026-05-21): §10.7 added — validation-before-implementation locked principle (D045).
