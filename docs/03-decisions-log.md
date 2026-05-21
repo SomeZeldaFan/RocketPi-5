@@ -378,3 +378,14 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Rationale:** D031 was written before detailed structural design began. As CAD work approaches, metal linkages are a practical and common technique for reinforcing 3D-printed structures at joint and load points — excluding them prematurely would constrain the structural design without engineering justification. Chemical reinforcements (resin, fibreglass, epoxy) remain excluded on complexity and process grounds.
 **Alternatives considered:**
 - Reaffirm D031's FDM-only scope — rejected; unnecessarily forecloses a standard fabrication technique before structural loads are characterized.
+
+### D045 — Test protocol: full test plan before implementation, layered gate structure, tests before code
+
+**Decision:** The project adopts a layered, gated validation protocol governing all implementation work.
+- The complete test plan exists in `docs/07-test-plan.md` before any module is implemented. Every test carries an objective, setup, procedure, acceptance criteria defined in advance, apparatus, and an execution log.
+- Tests are written before the module they test. A module does not enter implementation until its test entries exist.
+- Progression is governed by a non-bypassable gate structure: G0 (build artifact validation) → G1 (dev-PC unit tests, boundary/edge coverage, exhaustive FSM coverage, ≥90% branch coverage) → G1.5 (hardware-in-the-loop simulation) → G2 (per-peripheral hardware bring-up, power, bus contention, fault injection, calibration cross-reference) → G3 (full system integration, pipeline integrity, fault propagation, reboot recovery) → G4 (timing margin, watchdog recovery, soak, concurrent fault injection). A single failing test blocks its gate; a test that has not been run counts as failing.
+**Rationale:** Tests written after code are written to pass the code as written; tests written before code are written to verify the contract. For a fault-tolerant GNC project presented to aerospace reviewers, the difference is detectable in the results. A gate structure makes "validated" a defensible, ordered claim rather than an assertion, and prevents implementation-time pressure from skipping verification. Codified into constraints §10.7.
+**Alternatives considered:**
+- Test after implementation — rejected; produces tests that confirm the code rather than the contract.
+- Informal/ad-hoc testing without a gate structure — rejected; "validated" becomes unfalsifiable, and the order of bring-up (dev-PC before flash, peripheral before integration) is exactly the discipline that catches faults cheaply.
