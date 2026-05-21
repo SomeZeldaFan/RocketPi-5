@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-05-20
+**Last updated:** 2026-05-21
 
 Live project status. Updated at the end of every work session.
 
@@ -8,9 +8,9 @@ Live project status. Updated at the end of every work session.
 
 ## Where we are
 
-**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Coding framework scaffold complete (D043, 2026-05-20): software architecture §4 locked, avionics directory layered scaffold created, all module headers + stub `.c` files in place. Active tracks: per-module header scrutiny (next), airframe structural design (CAD), literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending LR-4 and CAD.
+**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Coding framework scaffold complete (D043, 2026-05-20): software architecture §4 locked, avionics directory layered scaffold created, all module headers + stub `.c` files in place. Test plan fully populated (2026-05-21): `docs/07-test-plan.md` carries the complete test enumeration and the G0–G4 gate structure; validation-before-implementation locked as a principle (D045, §10.7). Active tracks: per-module header scrutiny (next), airframe structural design (CAD), literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending LR-4 and CAD.
 
-**Constraints doc:** v0.9 locked.
+**Constraints doc:** v1.1 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
 **Depth axis:** Locked — fault-tolerant graceful degradation under sensor compromise.
 **Flight:** Excluded.
@@ -24,9 +24,11 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 ## What's done
 
 - Phase 0 complete — project shape, depth axis, scope, and principles all locked.
-- Constraints document locked at v0.9.
-- Decisions log populated: D001–D043.
+- Constraints document locked at v1.1 (v1.0: §4 updated for Phase 1 decisions; v1.1: §10.7 validation-before-implementation principle added).
+- Decisions log populated: D001–D049 (D048 reserved — to be logged in the `platform.h` scrutiny session).
 - Coding standard locked: NASA JPL Power of 10.
+- **Test plan fully populated (2026-05-21)** — `docs/07-test-plan.md` carries the complete test enumeration (build artifact, platform, all five sensor/peripheral bring-ups, FDIR/estimator/control-law/telemetry/C2/FSM unit tests, code coverage, boundary cases, exhaustive FSM coverage, HIL, power, bus contention, per-peripheral and concurrent fault injection, pipeline integrity, fault propagation, reboot recovery, timing margin, watchdog recovery, soak) and the non-bypassable G0–G4 gate structure. Tests are written before the modules they test (D045).
+- **D044–D049 logged.** D044: airframe reinforcement boundary revised. D045: test protocol and gate structure. D046: actuator fault detection — operator-asserted (no servo feedback path). D047: loop overrun policy — warn, halt on 3 consecutive. D049: FSM responds to sensing health only, not actuator health.
 - Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
 - **Phase 1 architecture review complete** (per D023). Eleven structural decisions logged as D024–D034, covering: IMU configuration, real-time path ownership, sensor bus topology, barometer inclusion, telemetry radio termination, MCU↔Pi physical link, control surface count, test stand / airframe configuration, Pi 5 role precision, power architecture, and authoritative time source.
 - **Hardware selection complete** (D038–D042). UAE 433 MHz band confirmed (TDRA). MCU: STM32F407ZGT6 core board. IMU-1: GY-BMI160 (Bosch BMI160). IMU-2: ICM-42688-P breakout (TDK InvenSense). Barometer: MS5611 via GY-63 module. Radio: HolyBro SiK V3 433 MHz pair. All components on breakout modules or core boards — no custom PCB required. ST-Link V2 and full tooling procured. LR-2, LR-3, and coding framework all unblocked.
@@ -67,6 +69,12 @@ These items were explicitly deferred during the 2026-05-20 coding framework sess
 
 - **Watchdog architecture scrutiny** — `avionics/inc/hardware/platform.h` flags this. The IWDG timeout value, the placement of `platform_watchdog_kick()` calls within each module `_init()`, the IWDG vs WWDG choice, and the safe-state behaviour on watchdog reset vs. assert reset all need a dedicated review. Sign-off required before the platform module is implemented for real.
 
+- **NVIC interrupt priority scheme (D048)** — the relative NVIC priorities of the TIM2 tick ISR and the DMA transfer-complete ISRs must be explicitly defined and documented, so a higher-priority interrupt cannot preempt a lower one mid-update and leave an `isr_flags.h` boundary variable inconsistent. To be decided and logged as D048 during the `platform.h` scrutiny session. TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2) cannot be authored or run until D048 exists.
+
+- **`CMD_FAULT_ACTUATOR` family (code dependency)** — `command_id_t` in `avionics/inc/avionics_types.h` needs a `CMD_FAULT_ACTUATOR` set/clear family, per actuator index, to support the operator-asserted actuator fault path (D046). Blocks TEST-C2-008, TEST-PFLT-005, TEST-INT-010, TEST-FPP-002, TEST-CFI-002, TEST-CFI-005. Must land before G2 closes; needs an owner.
+
+- **`overrun_count` telemetry field (code dependency)** — `telemetry_frame_t` in `avionics/inc/avionics_types.h` needs an `overrun_count` field, present in every frame, to expose the D047 loop-overrun warning path in a release-build-safe way. Blocks TEST-TEL-008 and the frame-verified TEST-INT-004 warning path. Bundle with the D047 implementation work.
+
 - **Build system** — no Makefile, no STM32CubeIDE `.ioc`, no dev-PC GCC configuration produced this session. The avionics scaffold compiles in principle but has not been validated against any toolchain yet. Build system is the first blocker before any compilation can be verified.
 
 - **`platform_safe_state()` layer violation** — function removed from `platform.h` (was in earlier draft of the plan). Hardware layer cannot include output layer headers; the question of how a hardware-layer assertion drives the actuators to a safe state is unresolved. Options: HAL register write that bypasses `actuators.c`; callback registered at init; assert handler in `main.c` calls `actuators_safe()` directly before halting. Decision needed before any path that fires `platform_safe_state()` is implemented.
@@ -79,8 +87,8 @@ Nothing blocked.
 
 ## Next concrete tasks
 
-1. **FDIR/estimator boundary resolution session** — close out the deferred boundary issue before either FDIR or the EKF can be implemented. Produces: revised function signatures for `fdir_update()`, `estimator_predict()`, `estimator_update()`; revised two-phase tick sequence in §4.2; D044 logging the boundary decision.
-2. **Per-module header scrutiny sessions** — one session per header, deep review of contract, NULL semantics, safe defaults, and JPL compliance. Order suggested: `platform.h` (and resolve watchdog scrutiny in the same session) → `bmi160.h` / `icm42688p.h` → `ms5611.h` → `sik_radio.h` → `actuators.h` → `telemetry.h` / `c2.h` → `mode_fsm.h` → `control_law.h` → algorithm-layer last (after FDIR/estimator boundary closes).
+1. **FDIR/estimator boundary resolution session** — close out the deferred boundary issue before either FDIR or the EKF can be implemented. Produces: revised function signatures for `fdir_update()`, `estimator_predict()`, `estimator_update()`; revised two-phase tick sequence in §4.2; a new decision entry logging the boundary decision (next free number — D044 was used for the airframe reinforcement boundary, D048 is reserved for the NVIC priority scheme, so this is D050).
+2. **Per-module header scrutiny sessions** — one session per header, deep review of contract, NULL semantics, safe defaults, and JPL compliance. Order suggested: `platform.h` (resolve watchdog scrutiny AND log D048 — the NVIC interrupt priority scheme — in the same session; TEST-PLT-005 and TEST-PLT-HW-007 depend on D048) → `bmi160.h` / `icm42688p.h` → `ms5611.h` → `sik_radio.h` → `actuators.h` → `telemetry.h` / `c2.h` → `mode_fsm.h` → `control_law.h` → algorithm-layer last (after FDIR/estimator boundary closes).
 3. **Build system session** — first blocker before any compilation. Produces: STM32CubeIDE project `.ioc` configured for STM32F407ZGT6, Makefile or CMake configuration that picks up the layered `avionics/inc` and `avionics/src` tree, dev-PC GCC configuration for the `avionics/test/` harnesses.
 4. **GCS session** — Python ground station decomposition deliberately deferred from the 2026-05-20 architecture session. Mirrors MCU decomposition: transport / protocol / parser / state model / dashboard / attitude viz / command sender / frame logger. Must implement runtime check of `protocol_version` field on every received frame.
 5. **LR-1 — Control loop rate** — independent of hardware; runs now. Produces a justified Hz recommendation to commit into REQ-SYS-011 and `AVIONICS_LOOP_RATE_HZ` in `avionics_types.h`.
