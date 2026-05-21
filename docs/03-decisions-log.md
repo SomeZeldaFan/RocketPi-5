@@ -402,3 +402,12 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 - Halt on first overrun — rejected; too aggressive, transient-fragile, turns a recoverable glitch into a demo-ending event.
 - Silently tolerate overruns — rejected; breaks the real-time guarantee with no signal to the operator.
 - Windowed counter (N overruns within a sliding window) — rejected for now; consecutive counting is simpler to implement and analyse, and a genuine sustained fault trips it just as fast.
+
+### D049 — Mode FSM responds to sensing health only, not actuator health
+
+**Decision:** The mode FSM (`mode_fsm.c`) gates mode transitions on estimator/sensing health only — e.g. rejecting `SYS_MODE_FLIGHT` entry while the estimator is faulted. It has no dependency on `actuator_healthy[i]`. Actuator health is handled entirely by the control law's degradation chain (`CTL_MODE_FULL_AUTHORITY → 3FIN_REDUCED → 2FIN_REDUCED → SAFE_HOLD`).
+**Rationale:** Clean separation of concerns — the FSM owns operator intent and sensing viability; the control law owns actuation viability. The control law's `SAFE_HOLD` is already the safety mechanism for total actuator loss, so an FSM gate on actuator health would be redundant. This keeps the FSM transition matrix bounded and reviewable: TEST-FSM-EXH-001's exhaustive matrix stays at 90 cells (3 modes × 6 inputs × 5 sensing-health states) with actuator-fault states deliberately and documentedly excluded.
+**Alternatives considered:**
+- FSM also gates FLIGHT/DEMO entry on actuator health — rejected; redundant with the control law's `SAFE_HOLD`, and expands the FSM transition matrix for no behavioural gain.
+
+**Note on numbering:** D048 (NVIC interrupt priority scheme) is intentionally reserved — it will be logged during the dedicated `platform.h` per-module scrutiny session, where the relative priorities of the TIM2 tick ISR and the DMA transfer-complete ISRs are decided. The D047→D049 gap here is deliberate.
