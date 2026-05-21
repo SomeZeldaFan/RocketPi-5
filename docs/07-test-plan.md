@@ -1954,10 +1954,10 @@ These go beyond the singular fault injection of G3. Each injects two or more ind
 
 ## Pre-implementation blockers (tracked)
 
-These external dependencies must each have a scheduled date and an owner before the dependent tests can be executed:
+These external dependencies must be completed before the tests they block can run. Ordering matters — each is listed with the earliest gate it blocks:
 
+- **LR-4 (vehicle dynamics)** — produces the plant model and the REQ-CTL-004 settling bound. Blocks TEST-CTL-010 (G1), TEST-HIL-007/007B/007C (G1.5), and the TEST-STR-010 CG threshold (G4). LR-4 depends on first-pass airframe CAD; both must complete before G1. Earliest and tightest dependency in the plan.
+- **LR-3 (FDIR innovation gating)** — produces the `CHI2_THRESHOLD_2DOF` derivation formula and detection-latency bound. Blocks TEST-CAL-001, TEST-FDR-007/010/015, TEST-HIL-004. Must complete before G1.
 - **D048 (NVIC interrupt priority scheme)** — `platform.h` scrutiny-session deliverable. Blocks TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2).
-- **LR-4 (vehicle dynamics)** — produces the plant model and the REQ-CTL-004 settling bound. Blocks TEST-CTL-010 (G1), TEST-HIL-007/007B/007C (G1.5), and the TEST-STR-010 CG threshold (G4). LR-4 depends on first-pass airframe CAD; both must land before G1.
-- **LR-3 (FDIR innovation gating)** — produces the `CHI2_THRESHOLD_2DOF` derivation formula and detection-latency bound. Blocks TEST-CAL-001, TEST-FDR-007/010/015, TEST-HIL-004. Must land before G1.
-- **`CMD_FAULT_ACTUATOR` family in `command_id_t`** — blocks TEST-C2-008 / PFLT-005 / INT-010 / FPP-002 / CFI-002 / CFI-005. Needs an owner; must land before G2 closes.
+- **`CMD_FAULT_ACTUATOR` family in `command_id_t`** — blocks TEST-C2-008 / PFLT-005 / INT-010 / FPP-002 / CFI-002 / CFI-005. Must land before G2 closes.
 - **`overrun_count` field in `telemetry_frame_t`** — blocks TEST-TEL-008 and the frame-verified TEST-INT-004 warning path. Bundle with the D047 implementation work.

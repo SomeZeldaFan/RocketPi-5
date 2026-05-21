@@ -71,7 +71,7 @@ These items were explicitly deferred during the 2026-05-20 coding framework sess
 
 - **NVIC interrupt priority scheme (D048)** — the relative NVIC priorities of the TIM2 tick ISR and the DMA transfer-complete ISRs must be explicitly defined and documented, so a higher-priority interrupt cannot preempt a lower one mid-update and leave an `isr_flags.h` boundary variable inconsistent. To be decided and logged as D048 during the `platform.h` scrutiny session. TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2) cannot be authored or run until D048 exists.
 
-- **`CMD_FAULT_ACTUATOR` family (code dependency)** — `command_id_t` in `avionics/inc/avionics_types.h` needs a `CMD_FAULT_ACTUATOR` set/clear family, per actuator index, to support the operator-asserted actuator fault path (D046). Blocks TEST-C2-008, TEST-PFLT-005, TEST-INT-010, TEST-FPP-002, TEST-CFI-002, TEST-CFI-005. Must land before G2 closes; needs an owner.
+- **`CMD_FAULT_ACTUATOR` family (code dependency)** — `command_id_t` in `avionics/inc/avionics_types.h` needs a `CMD_FAULT_ACTUATOR` set/clear family, per actuator index, to support the operator-asserted actuator fault path (D046). Blocks TEST-C2-008, TEST-PFLT-005, TEST-INT-010, TEST-FPP-002, TEST-CFI-002, TEST-CFI-005. Must land before G2 closes.
 
 - **`overrun_count` telemetry field (code dependency)** — `telemetry_frame_t` in `avionics/inc/avionics_types.h` needs an `overrun_count` field, present in every frame, to expose the D047 loop-overrun warning path in a release-build-safe way. Blocks TEST-TEL-008 and the frame-verified TEST-INT-004 warning path. Bundle with the D047 implementation work.
 
