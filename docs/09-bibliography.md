@@ -26,9 +26,6 @@ The function is to not lose useful sources. When you're debugging a sensor at 2a
 - **BPS.space YouTube channel** — https://www.youtube.com/@BPSspace
   *Hobbyist-but-serious rocket avionics work, including test stand methodology and active control implementations.*
 
-- **RocketPy documentation** — https://docs.rocketpy.org
-  *6-DOF rocket flight simulator in Python. Will be used for Demo 3.*
-
 - **NAR (National Association of Rocketry) safety code & motor classification** — https://www.nar.org
   *Universal vocabulary for hobby rocket motors; useful even though we're not flying.*
 

@@ -79,6 +79,7 @@ Format: **Date — Decision — Rationale — Alternatives considered.**
 **Decision:** Without real flight data, "sim vs. actual comparison" is not deliverable. Demo 3 is redefined as: high-fidelity simulation of the vehicle in hypothetical flight, with the actual avionics software running against simulated sensor inputs (hardware-in-the-loop), and stress-test results.
 **Rationale:** Honest about what is deliverable without flight. Simulation as a standalone deliverable is still rigorous and aerospace-authentic.
 **Alternatives:** Drop Demo 3 entirely — rejected; simulation work is genuine engineering content.
+**Superseded by D051 (2026-06-04).**
 
 ### D013 — Depth axis locked: Direction 1 (fault-tolerant graceful degradation)
 
@@ -215,6 +216,7 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Alternatives considered:**
 - Exclude entirely — rejected; Demo 3 becomes thin (no altitude channel in HIL); FDIR loses dissimilar-sensor diversity; bench demo loses the cross-modal narrative.
 - Software-only barometer (simulated in HIL only, not on physical hardware) — rejected; breaks the "same firmware on real and simulated hardware" property that makes HIL credible.
+**Note (D051):** HIL removed. Barometer retention is still justified on the remaining grounds — dissimilar-sensor FDIR diversity and the cross-modal bench demo narrative (tap the stand: IMUs see acceleration, baro sees no altitude change). Hardware decision unchanged.
 
 ### D028 — Telemetry radio direct to MCU via UART + DMA
 
@@ -260,6 +262,7 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 - Display + C2 only with no logging — rejected; contradicts constraints v0.4.
 - Pi as HIL simulation host — rejected; wastes the dev PC; crams compute-heavy simulation onto resource-constrained SBC; ties simulation development to Pi's environment.
 - Pi as offline analysis host — rejected; strictly worse than dev PC for analysis work, which is iteration-heavy.
+**Note (D051):** HIL on dev PC cancelled. Dev PC role reduced to firmware development environment and post-test analysis host. Pi role unchanged.
 
 ### D033 — Power architecture: split rails, common ground
 
@@ -307,6 +310,7 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Alternatives considered:**
 - Lock Demo 1 as a prescriptive requirement now — rejected; Demo 1 as described in §6 may not reflect the most effective way to present the system once it is working. The constraint on the demo should be the system's real capabilities, not an upfront script.
 - Drop demos entirely — rejected; a live demonstration remains a project deliverable; only the prescriptive specification of its content is deferred.
+**Note (D051):** Demo 3 cancelled. Single remaining demo is Demo 1 — live bench control with deliberate fault injection.
 
 ---
 
@@ -384,7 +388,7 @@ The MCU acknowledges mode commands. The ground station UI reflects the active mo
 **Decision:** The project adopts a layered, gated validation protocol governing all implementation work.
 - The complete test plan exists in `docs/07-test-plan.md` before any module is implemented. Every test carries an objective, setup, procedure, acceptance criteria defined in advance, apparatus, and an execution log.
 - Tests are written before the module they test. A module does not enter implementation until its test entries exist.
-- Progression is governed by a non-bypassable gate structure: G0 (build artifact validation) → G1 (dev-PC unit tests, boundary/edge coverage, exhaustive FSM coverage, ≥90% branch coverage) → G1.5 (hardware-in-the-loop simulation) → G2 (per-peripheral hardware bring-up, power, bus contention, fault injection, calibration cross-reference) → G3 (full system integration, pipeline integrity, fault propagation, reboot recovery) → G4 (timing margin, watchdog recovery, soak, concurrent fault injection). A single failing test blocks its gate; a test that has not been run counts as failing.
+- Progression is governed by a non-bypassable gate structure: G0 (build artifact validation) → G1 (dev-PC unit tests, boundary/edge coverage, exhaustive FSM coverage, ≥90% branch coverage) → G2 (per-peripheral hardware bring-up, power, bus contention, fault injection, calibration cross-reference) → G3 (full system integration, pipeline integrity, fault propagation, reboot recovery) → G4 (timing margin, watchdog recovery, soak, concurrent fault injection). A single failing test blocks its gate; a test that has not been run counts as failing.
 **Rationale:** Tests written after code are written to pass the code as written; tests written before code are written to verify the contract. For a fault-tolerant GNC project presented to aerospace reviewers, the difference is detectable in the results. A gate structure makes "validated" a defensible, ordered claim rather than an assertion, and prevents implementation-time pressure from skipping verification. Codified into constraints §10.7.
 **Alternatives considered:**
 - Test after implementation — rejected; produces tests that confirm the code rather than the contract.
@@ -411,3 +415,29 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 - FSM also gates FLIGHT/DEMO entry on actuator health — rejected; redundant with the control law's `SAFE_HOLD`, and expands the FSM transition matrix for no behavioural gain.
 
 **Note on numbering:** D048 (NVIC interrupt priority scheme) is intentionally reserved — it will be logged during the dedicated `platform.h` per-module scrutiny session, where the relative priorities of the TIM2 tick ISR and the DMA transfer-complete ISRs are decided. The D047→D049 gap here is deliberate.
+
+---
+
+## 2026-06-04
+
+### D051 — HIL simulation scrapped; scope reduced to three physical deliverables
+
+**Decision:** Hardware-in-the-Loop (HIL) simulation is removed from the project scope entirely. Demo 3 (as described in constraints §6 and defined in D012) is cancelled. The `sim/` directory is retained as a structural placeholder per D022 but will not be populated. RocketPy is removed from the bibliography. The three remaining deliverables are: (1) physical 3D-printed airframe, (2) fault-tolerant GNC algorithm (estimator + FDIR + control law) running on the STM32F407, (3) ground station with live telemetry dashboard on the Pi 5.
+
+**Rationale:**
+1. HIL scope was never formally defined. Simulation requirements (docs/04, §10) and simulation architecture (docs/05, §6) remained deferred stubs at the point of this decision. Removing a component with no locked requirements, no locked architecture, and no code carries zero integration risk.
+2. The project's core depth axis — fault-tolerant graceful degradation — is more compellingly demonstrated through live physical fault injection on the bench than through software simulation. A running system that survives deliberate sensor disconnect in real-time is a stronger proof-of-concept than an equivalent HIL run.
+3. HIL validation (G1.5 gate, TEST-HIL-001 through TEST-HIL-008) was the only pre-hardware gate that proved closed-loop stability and FDIR detection under dynamic conditions. Removing it shifts that validation to the hardware phase. This is accepted: G1 unit tests cover algorithm correctness in isolation; the bench demo closes the loop physically. Any instability in degraded fin modes will surface during bench integration — which, given the bench-only scope of this project, is an acceptable trade.
+4. The focused sprint model (mac-only pre-hardware work followed by a hardware phase) cannot absorb a parallel Python simulation workload without diluting the three physical deliverables. HIL would have required a closed-loop plant model (LR-4 dependency), a dev-PC Python harness, and a UART injection protocol — each a non-trivial effort with no bearing on the bench demo.
+5. Funding has been secured. The project must ship a physical demo. Simulation is not a prerequisite for that outcome.
+
+**Implications accepted:**
+- Closed-loop stability in `CTL_MODE_3FIN_REDUCED` and `CTL_MODE_2FIN_REDUCED` is not proven analytically before hardware. Risk logged in risk register (R-HIL-01).
+- FDIR fault detection latency (LR-3 bound) is validated only on physical hardware, not in a controlled synthetic scenario. Risk logged (R-HIL-02).
+- TEST-EST-010 (deterministic replay) loses its original stated purpose ("required for HIL credibility"). It is retained as a standalone firmware quality gate — deterministic replay is a correctness property independent of HIL.
+- LR-4 (plant model / vehicle dynamics for HIL closed-loop) loses its only consumer. LR-4 is cancelled.
+
+**Alternatives considered:**
+- Defer HIL indefinitely but keep it in scope — rejected; deferred scope that will never be executed is dead weight in every planning session. A clean removal is more honest.
+- Retain HIL as optional stretch goal — rejected; optional scope in a sprint model creates ambiguity about what "done" means. The three deliverables are sufficient and unambiguous.
+- Keep G1.5 gate as a software-only unit test gate without plant simulation — rejected; the gate as designed is specifically a closed-loop dynamic validation. Reusing the gate label for a different purpose introduces confusion. Affected tests are removed or repurposed individually.

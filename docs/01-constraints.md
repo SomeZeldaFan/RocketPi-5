@@ -34,7 +34,7 @@ Raspberry Pi 5 kit: Pi 5, breadboard, LCD display, starter kit components, power
 - Soldering iron (trivial to acquire).
 - Multimeter (trivial to acquire).
 - 3D printer (accessible via family).
-- Development computer: Ryzen 7 9700X, RTX 4080 Super, 64 GB DDR5. This is a serious dev machine — high-fidelity simulation and ML workloads are first-class options.
+- Development computer: Ryzen 7 9700X, RTX 4080 Super, 64 GB DDR5. Firmware development, post-test analysis, and ML workloads are first-class options.
 
 ### 3.3 Acquirable
 
@@ -48,7 +48,7 @@ Soft ceiling **~$2,000 USD** across the project lifetime (excluding tools listed
 
 ## 4. Project Shape
 
-**Bench-only model rocketry GNC suite, avionics- and systems-centric, with high-fidelity simulation as parallel deliverable.**
+**Bench-only model rocketry GNC suite, avionics- and systems-centric.**
 
 The system is built to operational completeness on a test stand — IMU, sensor fusion, state estimation, control law, servo-driven aerodynamic control surfaces, ground station — but is **not flown**. Flight is excluded for procurement, regulatory, and logistical reasons (see §5).
 
@@ -90,10 +90,6 @@ This direction is selected because:
 
 Live demonstration of control surfaces responding to physical perturbation of the test stand. Includes nominal operation and live demonstration of fault tolerance: disconnect a sensor mid-operation, watch the estimator degrade gracefully and report sensor health.
 
-### Demo 2 — High-fidelity simulation
-
-RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with the actual avionics software running against simulated sensor inputs (hardware-in-the-loop). The deliverable is *not* simulation-vs-actual comparison (no actual flight data exists), but rather: simulated flight envelope, expected vehicle behavior, predicted control system performance, and stress-test results under simulated sensor failures during flight regimes.
-
 ---
 
 ## 7. Scope: Inclusions
@@ -105,7 +101,6 @@ RocketPy (or equivalent) simulation of the vehicle in hypothetical flight, with 
 - Bidirectional telemetry link between MCU and Pi 5 ground station. Downlink: sensor data, estimator state, sensor health. Uplink: mode commands from ground station to MCU.
 - **Demo/flight mode toggle** — ground station can command the MCU between flight mode (real deflection limits) and demo mode (relaxed deflection limits for presentation legibility). MCU acknowledges all mode commands; ground station reflects active mode and acknowledgment status.
 - **Live ground station UI** running on the Pi 5 (1024×600 touch display, or external monitor). Multi-pane dashboard showing: live telemetry charts, sensor health status and confidence indicators, the system's own estimate of data accuracy and veracity, a real-time 3D attitude visualization of the rocket body driven by the estimator output, and a separate zoomed view of the fin assembly showing actuated control surface deflections as they occur.
-- High-fidelity simulation of vehicle in hypothetical flight
 - Post-test analysis tooling (Python, on dev machine)
 - Documentation: requirements, architecture, decisions, test results, post-project writeup
 
@@ -129,7 +124,7 @@ Candidate scope additions and design decisions are evaluated against the followi
 
 1. **Domain authenticity** — engages a real aerospace problem, not cosmetically. Fault-tolerant estimation is the project's primary authenticity claim.
 2. **Technical depth** — at least one component requiring genuine learning beyond tutorial-level. The sensor fusion + fault detection pipeline carries this.
-3. **Systems integration** — multiple subsystems with real interfaces. IMU, MCU, servos, telemetry radio, ground station, simulation — all must compose.
+3. **Systems integration** — multiple subsystems with real interfaces. IMU, MCU, servos, telemetry radio, ground station — all must compose.
 4. **Documentation & rigor** — written up as if for review. Requirements traced, decisions justified, results measured.
 5. **Demonstrability** — non-builder can appreciate the result in under five minutes (Demo 1 satisfies this).
 6. **Originality of choice, not invention** — the specific framing (bench-only, fault-tolerant, GNC-focused, defense-adjacent) is uncommon. Not novel research; genuinely uncommon at student level.
@@ -171,8 +166,7 @@ No code is flashed to hardware until it has passed its full dev-PC validation su
 
 ## 11. Open Questions
 
-1. **Simulation validation standard.** NASA-STD-7009 is a candidate framework for documenting simulation credibility (Demo 2). Defer until simulation scope is defined.
-2. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
+1. **True C2 depth (stretch).** Full command and control implementation — command authentication, sequencing, and link-loss fail-safe behavior on the MCU — is a stretch goal. Scope if time permits after core control loop is validated.
 
 ---
 

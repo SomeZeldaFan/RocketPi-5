@@ -226,16 +226,16 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-CTL-003 — Flight mode deflection limits**
-> In flight mode, fin deflection commands shall be clamped to ±[TBD — pending LR-4]°. Commands exceeding this limit shall be saturated at the limit value; no out-of-range command shall reach the servo.
+> In flight mode, fin deflection commands shall be clamped to ±[TBD — pending airframe CAD and dynamics analysis]°. Commands exceeding this limit shall be saturated at the limit value; no out-of-range command shall reach the servo.
 > *Category:* Constraint.
 > *Priority:* Must.
-> *Rationale:* D020. Flight mode applies real aerodynamic deflection limits appropriate to a flight vehicle. The specific limit angle is determined by LR-4 (vehicle dynamics analysis and servo selection) — it is the maximum deflection that does not cause aerodynamic stall or structural overload on the fin.
+> *Rationale:* D020. Flight mode applies real aerodynamic deflection limits appropriate to a flight vehicle. The specific limit angle is determined by airframe dynamics analysis and servo selection — it is the maximum deflection that does not cause aerodynamic stall or structural overload on the fin.
 > *Verification:* Bench measurement — command flight mode; apply maximum perturbation; measure peak fin deflection via position feedback; confirm it does not exceed the TBD limit.
 
 ---
 
 > **REQ-CTL-004 — Demo mode deflection limits**
-> In demo mode, fin deflection limits shall be relaxed to ±[TBD — pending LR-4]°, exceeding the flight mode limits, to make control surface motion visually legible to an observer.
+> In demo mode, fin deflection limits shall be relaxed to ±[TBD — pending airframe CAD and dynamics analysis]°, exceeding the flight mode limits, to make control surface motion visually legible to an observer.
 > *Category:* Constraint.
 > *Priority:* Must.
 > *Rationale:* D020. On a bench demo, the fin deflections in flight mode may be too small for an observer to see clearly. Demo mode relaxes the limits to make the control system's response visually unambiguous. The specific demo limit is chosen to be within servo travel and structurally safe on the bench article.
@@ -253,10 +253,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-CTL-006 — Perturbation rejection settling time**
-> Following a manual perturbation of the test stand, the system shall return the estimated attitude to within a defined band of the commanded setpoint within [TBD — pending LR-4] seconds of peak perturbation.
+> Following a manual perturbation of the test stand, the system shall return the estimated attitude to within a defined band of the commanded setpoint within [TBD — pending airframe CAD and dynamics analysis] seconds of peak perturbation.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* LR-4 pending. The settling time is a function of the airframe's moment of inertia, fin effectiveness, and the control law's bandwidth — none of which can be specified without airframe geometry and dynamics analysis. LR-4, which runs in parallel with early airframe CAD, provides these inputs.
+> *Rationale:* Pending airframe CAD. The settling time is a function of the airframe's moment of inertia, fin effectiveness, and the control law's bandwidth — none of which can be specified without airframe geometry and dynamics analysis. These inputs come from CAD and structural analysis, which run in parallel with early airframe design.
 > *Verification:* Bench test — apply a repeatable manual perturbation (defined angular impulse); measure time from perturbation peak to restoration within the defined band; average over five trials.
 
 ---
@@ -467,7 +467,7 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 > The wired USB-serial telemetry downlink shall achieve a sustained frame rate of ≥50 Hz during nominal operation.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* USB-serial at 115200 baud can sustain well over 50 frames per second at the expected frame size. 50 Hz on the wired link enables high-resolution data capture during integration testing and HIL sessions, where radio bandwidth would be a bottleneck.
+> *Rationale:* USB-serial at 115200 baud can sustain well over 50 frames per second at the expected frame size. 50 Hz on the wired link enables high-resolution data capture during integration testing, where radio bandwidth would be a bottleneck.
 > *Verification:* Bench measurement — log wired frame reception timestamps over 60 seconds; confirm mean and minimum frame rate ≥50 Hz.
 
 ---
@@ -709,12 +709,6 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 
 ---
 
-## 10. Simulation requirements
-
-*Deferred — to be populated once the HIL simulation scope is defined.*
-
----
-
-## 11. Demonstration requirements
+## 10. Demonstration requirements
 
 *Deferred — demo deliverables described in Constraints §6 are held open. The specific demo format will be defined once the core system is functional and its actual capabilities are known. The §6 descriptions are illustrative, not prescriptive.*

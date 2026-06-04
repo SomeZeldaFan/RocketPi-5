@@ -8,7 +8,7 @@ Live project status. Updated at the end of every work session.
 
 ## Where we are
 
-**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Coding framework scaffold complete (D043, 2026-05-20): software architecture §4 locked, avionics directory layered scaffold created, all module headers + stub `.c` files in place. Test plan fully populated (2026-05-21): `docs/07-test-plan.md` carries the complete test enumeration and the G0–G4 gate structure; validation-before-implementation locked as a principle (D045, §10.7). Active tracks: per-module header scrutiny (next), airframe structural design (CAD), literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending LR-4 and CAD.
+**Phase:** Phase 1 — requirements first pass complete (D035–D036 logged). Hardware selection complete (D038–D042). Coding framework scaffold complete (D043, 2026-05-20): software architecture §4 locked, avionics directory layered scaffold created, all module headers + stub `.c` files in place. Test plan fully populated (2026-05-21): `docs/07-test-plan.md` carries the complete test enumeration and the G0–G4 gate structure; validation-before-implementation locked as a principle (D045, §10.7). Active tracks: per-module header scrutiny (next), airframe structural design (CAD), literature reviews. LR-2 and LR-3 now unblocked by hardware selection. LR-1 runs in parallel. Servos deferred pending CAD.
 
 **Constraints doc:** v1.1 locked.
 **Domain:** Locked — bench-only model rocketry GNC suite.
@@ -27,7 +27,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 - Constraints document locked at v1.1 (v1.0: §4 updated for Phase 1 decisions; v1.1: §10.7 validation-before-implementation principle added).
 - Decisions log populated: D001–D049 (D048 reserved — to be logged in the `platform.h` scrutiny session).
 - Coding standard locked: NASA JPL Power of 10.
-- **Test plan fully populated (2026-05-21)** — `docs/07-test-plan.md` carries the complete test enumeration (build artifact, platform, all five sensor/peripheral bring-ups, FDIR/estimator/control-law/telemetry/C2/FSM unit tests, code coverage, boundary cases, exhaustive FSM coverage, HIL, power, bus contention, per-peripheral and concurrent fault injection, pipeline integrity, fault propagation, reboot recovery, timing margin, watchdog recovery, soak) and the non-bypassable G0–G4 gate structure. Tests are written before the modules they test (D045).
+- **Test plan fully populated (2026-05-21)** — `docs/07-test-plan.md` carries the complete test enumeration (build artifact, platform, all five sensor/peripheral bring-ups, FDIR/estimator/control-law/telemetry/C2/FSM unit tests, code coverage, boundary cases, exhaustive FSM coverage, power, bus contention, per-peripheral and concurrent fault injection, pipeline integrity, fault propagation, reboot recovery, timing margin, watchdog recovery, soak) and the non-bypassable G0–G4 gate structure. Tests are written before the modules they test (D045).
 - **D044–D049 logged.** D044: airframe reinforcement boundary revised. D045: test protocol and gate structure. D046: actuator fault detection — operator-asserted (no servo feedback path). D047: loop overrun policy — warn, halt on 3 consecutive. D049: FSM responds to sensing health only, not actuator health.
 - Ground station scope defined: multi-pane dashboard, 3D attitude visualization, fin deflection view, bidirectional C2 link, demo/flight mode toggle.
 - **Phase 1 architecture review complete** (per D023). Eleven structural decisions logged as D024–D034, covering: IMU configuration, real-time path ownership, sensor bus topology, barometer inclusion, telemetry radio termination, MCU↔Pi physical link, control surface count, test stand / airframe configuration, Pi 5 role precision, power architecture, and authoritative time source.
@@ -35,7 +35,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 - Architecture document populated with hardware architecture (§2) and airframe structural architecture (§3 skeleton).
 - Risk register, test plan, and bibliography expanded with airframe-side entries.
 - **Pi 5 bring-up complete.** DietPi v10.3.3 installed on kernel 6.18.29+rpt-rpi-2712. SSH access confirmed at 192.168.3.25 (wlan0). GPIO stack verified: lgpio 0.2.2 + gpiozero 2.0.1 on gpiochip0 (RP1). Hardware revision e04171.
-- **Requirements document first pass complete** (docs/04-requirements.md). Sections 1–8 populated: system-level, estimation, control, FDIR, telemetry, ground station, power, documentation. Sections 9–11 (airframe, simulation, demonstration) deferred as stubs. Eight performance requirements carry [TBD] placeholders pending literature review (LR-1 through LR-4) — see in-progress below.
+- **Requirements document first pass complete** (docs/04-requirements.md). Sections 1–8 populated: system-level, estimation, control, FDIR, telemetry, ground station, power, documentation. Sections 9–10 (airframe, demonstration) deferred as stubs. Eight performance requirements carry [TBD] placeholders pending literature review (LR-1 through LR-3) — see in-progress below.
 - **D043 logged (2026-05-20)** — scheduling model: bare-metal superloop with DMA + ISRs. FreeRTOS explicitly rejected. Five-reason rationale documented; alternatives considered.
 - **Software architecture §4 written and locked (2026-05-20)** — `docs/05-architecture.md §4`. Module decomposition, scheduling model with 12-step tick sequence, ISR table with volatile discipline, canonical type definitions, fault propagation chain with four invariants, module interface contracts, test harness strategy. GCS architecture explicitly deferred to its own session.
 - **Avionics scaffold complete (2026-05-20)** — layered directory structure (`hardware/`, `algorithm/`, `output/`, `orchestration/`). `avionics_types.h` (canonical types, `volatile_flag_t`, `AVIONICS_PROTOCOL_VERSION`), `isr_flags.h` (manifest of all ISR/main-loop boundary crossings), 12 module headers with real declarations + comment contracts, 12 stub `.c` files with PLACEHOLDER RETURN comments and zero functional code, `main.c` superloop skeleton expressing the 12-step tick sequence, `stm32f4xx_it.c` and `stm32f4xx_hal_msp.c` HAL stub files, 4 dev-PC test harness stubs.
@@ -60,8 +60,6 @@ These tasks must be completed before the indicated requirements in docs/04-requi
 - **LR-3 — FDIR innovation gating design** *(unblocks REQ-FDR-008)*
   **Requires both LR-1 and IMU selection.** Chi-squared consistency test design for dual-IMU cross-check. Window size and threshold selection — requires the loop rate (LR-1) and IMU noise specs (datasheets) as inputs. Characterise the tradeoff between false-positive rate and detection latency. Produce a justified detection latency bound in milliseconds.
 
-- **LR-4 — Vehicle dynamics** *(unblocks REQ-CTL-003, REQ-CTL-004, REQ-CTL-006)*
-  **Requires airframe CAD geometry.** Pitch/yaw/roll moments of inertia, fin effectiveness coefficients, achievable control bandwidth and settling time. Run in parallel with early airframe design — geometric inputs (body diameter, fin area, moment arms) come from the CAD model.
 
 ### Deferred — must be tracked, not lost
 
@@ -94,7 +92,7 @@ Nothing blocked.
 5. **LR-1 — Control loop rate** — independent of hardware; runs now. Produces a justified Hz recommendation to commit into REQ-SYS-011 and `AVIONICS_LOOP_RATE_HZ` in `avionics_types.h`.
 6. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
 7. **LR-3 — FDIR innovation gating** — unblocked by D040; requires LR-1 first. Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
-8. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Unlocks LR-4. Run material coupon prints as structural design firms up.
+8. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Run material coupon prints as structural design firms up.
 9. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
 10. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
-11. **Servo finalisation** — after LR-4 and CAD provide torque and size requirements.
+11. **Servo finalisation** — after CAD provides torque and size requirements.

@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Hardware and structural architecture established (D024–D034). Software architecture locked (D043, 2026-05-20). Ground station and simulation sections pending.
+**Status:** Hardware and structural architecture established (D024–D034). Software architecture locked (D043, 2026-05-20). Ground station section pending.
 **Created:** 2026-05-11
 **Last updated:** 2026-05-20
 
@@ -28,7 +28,7 @@ Three operational nodes and one offline node:
 
 **Ground station.** Pi 5 (DietPi) with display and radio module. Bounded role (per D032): telemetry reception, logging, dashboard UI, C2 command transmission. Not in the real-time loop. Loss of the Pi does not affect MCU operation.
 
-**Dev PC (offline).** Ryzen 7 9700X, RTX 4080 Super, 64 GB DDR5. HIL simulation runtime host, post-test analysis host, firmware development environment. Not part of the deployed system. Connected to the Pi via SSH; connected to the MCU via wired USB-serial.
+**Dev PC (offline).** Ryzen 7 9700X, RTX 4080 Super, 64 GB DDR5. Firmware development environment, post-test analysis host. Not part of the deployed system. Connected to the Pi via SSH; connected to the MCU via wired USB-serial.
 
 ### 2.2 Sensor stack
 
@@ -39,7 +39,7 @@ Three operational nodes and one offline node:
 
 Specific IMU part selection is deferred to the component-selection phase, bounded by Constraints §11.2.
 
-**Barometer on dedicated I2C.** A single barometric pressure sensor alone on its own I2C peripheral. Pressure is a dissimilar measurement axis (pressure vs. inertial; membrane deflection vs. mass-on-spring), giving FDIR a third sensor type immune to the failure modes that fool inertial sensors. Required for Demo 3's altitude channel; enables the bench cross-modal demo (tap the stand → IMUs see acceleration, baro sees no altitude change).
+**Barometer on dedicated I2C.** A single barometric pressure sensor alone on its own I2C peripheral. Pressure is a dissimilar measurement axis (pressure vs. inertial; membrane deflection vs. mass-on-spring), giving FDIR a third sensor type immune to the failure modes that fool inertial sensors. Enables the bench cross-modal demo (tap the stand → IMUs see acceleration, baro sees no altitude change).
 
 - Barometer: I2C, sole device on its bus.
 
@@ -70,7 +70,7 @@ All MCU code is JPL Power of 10 compliant per D019.
 
 The Pi runs no estimation, FDIR, or control-path logic. It uses MCU-provided timestamps for all data operations.
 
-**Dev PC.** Offline node. HIL simulation runtime host (per D032); analysis tooling; firmware development and flashing.
+**Dev PC.** Offline node. Firmware development and flashing; post-test analysis tooling.
 
 ### 2.4 Actuator stack
 
@@ -97,7 +97,7 @@ Optional power monitoring: ADC channels on the MCU sample both rail voltages, gi
 
 **Radio link (primary operational link).** Matched radio module pair (specific module TBD — LoRa-class). MCU-side module connected via UART with DMA-driven ring buffer (per D028). Pi-side module connected via UART/USB. Bidirectional: downlink (telemetry frames), uplink (C2 commands). JPL Power of 10 discipline ensures the radio driver cannot stall the control loop — bounded buffers, bounded handlers, no dynamic allocation.
 
-**Wired link (dev/debug/backup channel).** USB-serial between MCU and Pi (per D029). Used for firmware flashing, high-bandwidth log dumps, pre-demo subsystem checks, HIL data injection from the dev PC, and as a fallback if the radio fails during a demo.
+**Wired link (dev/debug/backup channel).** USB-serial between MCU and Pi (per D029). Used for firmware flashing, high-bandwidth log dumps, pre-demo subsystem checks, and as a fallback if the radio fails during a demo.
 
 **Same protocol on both transports.** A transport abstraction layer in MCU firmware sits above one driver per transport (radio UART, wired UART/USB). Above the transport layer sits the framing layer (packet boundaries, CRC). Above that sits the application layer (telemetry frame generation, command dispatch). The application layer is transport-agnostic — same packet format, same CRC, same command structure regardless of which transport delivered the bytes. The Pi-side ground station software has a symmetric transport abstraction.
 
@@ -122,10 +122,10 @@ Session wall-clock anchor: at session start, the Pi records its own clock alongs
 | MCU ↔ Radio (MCU-side) | UART + DMA | Bidirectional | Telemetry TX, command RX |
 | Radio ↔ Radio | RF | Bidirectional | Wireless telemetry + C2 link |
 | Pi ↔ Radio (Pi-side) | UART/USB | Bidirectional | Telemetry RX, command TX |
-| MCU ↔ Pi (wired) | USB-Serial | Bidirectional | Dev/debug, firmware flash, HIL injection, backup |
+| MCU ↔ Pi (wired) | USB-Serial | Bidirectional | Dev/debug, firmware flash, backup |
 | Pi → Display | HDMI/DSI | Pi to display | Dashboard rendering |
 | Dev PC ↔ Pi | SSH over network | Bidirectional | Remote development and analysis |
-| Dev PC ↔ MCU | USB-Serial | Bidirectional | Firmware flash, HIL simulation injection |
+| Dev PC ↔ MCU | USB-Serial | Bidirectional | Firmware flash, debug |
 
 ### 2.9 Key architectural boundaries
 
@@ -323,7 +323,7 @@ Ground station dashboard
 
 **fdir:** `_init()`. `_update()` signature **intentionally incomplete** — FDIR/estimator boundary resolution required before implementation. See open task in `02-current-state.md`. Do not implement against the current stub signature.
 
-**estimator:** `_init()`, `_reset()` for HIL replay. `_predict()` and `_update()` signatures **intentionally incomplete** — same boundary task. See open task. Do not implement against current stub signatures.
+**estimator:** `_init()`, `_reset()`. `_predict()` and `_update()` signatures **intentionally incomplete** — same boundary task. See open task. Do not implement against current stub signatures.
 
 **control_law:** `_init()`, `_update(est, health, sys_mode, out) → control_mode_t`. Reconfigures mixing matrix based on `health.actuator_healthy[4]`.
 
@@ -351,17 +351,7 @@ Pi 5 role bounded by D032 to: telemetry reception, logging, dashboard UI, C2 com
 
 ---
 
-## 6. Simulation Architecture
-
-**Status:** Skeleton — populated when HIL simulation scope is defined.
-
-HIL simulation runs on the dev PC (per D032). Dev PC injects simulated sensor data into the MCU over the wired link (per D029); MCU runs its real fusion / FDIR / control firmware against the injected data; resulting telemetry flows back through the Pi as ground station. From the Pi's perspective, HIL telemetry is indistinguishable from real-bench telemetry — same packet format, same MCU timestamps, same dashboard rendering.
-
-Mass properties for the simulated rocket are derived directly from the airframe CAD model (per §3), giving the HIL configuration a tighter validation story than a measured commercial kit could provide.
-
----
-
-## 7. Integration Points
+## 6. Integration Points
 
 **Status:** Skeleton — populated alongside requirements.
 

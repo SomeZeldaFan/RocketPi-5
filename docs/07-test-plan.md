@@ -34,8 +34,7 @@ Progression through the project is governed by gates. No gate may be bypassed. A
 | Gate | Condition to pass | Unlocks |
 |------|-------------------|---------|
 | G0 | Build artifact tests pass (BLD-001–004) | Dev-PC unit tests |
-| G1 | All dev-PC unit tests pass (PLT structural subset incl. NVIC priority-scheme check / FDR / EST / CTL / TEL / C2 / FSM) + boundary and edge case coverage (BND) + exhaustive FSM transition coverage + code coverage ≥ 90% branch coverage on all algorithm modules (COV) | HIL simulation |
-| G1.5 | HIL simulation suite passes: nominal attitude tracking, all fault modes injected in simulation, deterministic replay confirmed, degraded-mode closed-loop stability verified (HIL-001–008 incl. 007B/007C) | Hardware peripheral bring-up |
+| G1 | All dev-PC unit tests pass (PLT structural subset incl. NVIC priority-scheme check / FDR / EST / CTL / TEL / C2 / FSM) + boundary and edge case coverage (BND) + exhaustive FSM transition coverage + code coverage ≥ 90% branch coverage on all algorithm modules (COV) | Hardware peripheral bring-up |
 | G2 | All per-peripheral bring-up tests pass (BMI/ICM/BAR/RAD/ACT) + PLT-HW tests pass (TIM2, watchdog, power-on sequencing, interrupt-preemption consistency) + power consumption baseline per rail (PWR) + bus contention tests (BUS) + per-peripheral failure injection (PFLT) + FDIR threshold calibration cross-reference (CAL) | Subsystem integration |
 | G3 | All subsystem integration tests pass + end-to-end pipeline data integrity (PIP) + fault propagation completeness (FPP) + reboot and recovery to a verified known safe state (RBT) | Full system integration |
 | G4 | All integration tests pass + timing margin quantified (TMG) + watchdog recovery state verified (WDR) + 24 h long-duration soak (SOK), gated by prior validation of the anomaly-detection script (SOK-000) + concurrent/simultaneous multi-fault injection (CFI) | Demo permitted |
@@ -261,9 +260,9 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-BMI-010 — `IMU_OUT_OF_RANGE` on saturated values**
 > *Purpose:* The driver range-check catches physically implausible values.
 > *Linked requirement(s):* `avionics_types.h`, `bmi160.h` contract.
-> *Procedure:* Inject raw register values corresponding to > 100 m/s² acceleration via the HIL path.
+> *Procedure:* Inject raw register values corresponding to > 100 m/s² acceleration via the wired UART debug path.
 > *Acceptance criteria:* Driver returns `IMU_OUT_OF_RANGE`; does not propagate garbage to the estimator.
-> *Apparatus:* STM32F407ZGT6, dev-PC injection via HIL path.
+> *Apparatus:* STM32F407ZGT6, dev-PC wired UART injection.
 > *Execution log:* Not yet run.
 
 ---
@@ -748,7 +747,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 
 > **TEST-EST-010 — Deterministic replay**
 > *Purpose:* The same input sequence always produces the same output — no hidden non-determinism.
-> *Linked requirement(s):* Required for HIL credibility (TEST-HIL-001).
+> *Linked requirement(s):* Firmware correctness gate — deterministic replay is a required property of the control-path firmware.
 > *Procedure:* Record N ticks of sensor input; replay twice with `estimator_reset()` between.
 > *Acceptance criteria:* Both output sequences bit-identical.
 > *Apparatus:* Dev-PC test harness.
@@ -848,11 +847,11 @@ These verify platform-layer discipline by code review and static analysis. They 
 
 > **TEST-CTL-010 — Closed-loop stability on free-body vehicle dynamics plant model**
 > *Purpose:* The control law is actually stable with the expected vehicle dynamics.
-> *Linked requirement(s):* REQ-CTL-003, REQ-CTL-004 (from LR-4).
-> *Procedure:* Implement a simplified free-body vehicle dynamics plant model from LR-4 inertia estimates; close the loop on the dev PC; apply a 10° step.
+> *Linked requirement(s):* REQ-CTL-003, REQ-CTL-004.
+> *Procedure:* Implement a simplified free-body vehicle dynamics plant model from inertia estimates derived during airframe CAD; close the loop on the dev PC; apply a 10° step.
 > *Acceptance criteria:* Step response settles within the REQ-CTL-004 bound without oscillation; gain margin > 6 dB, phase margin > 45° from the Bode plot.
-> *Apparatus:* Dev PC, Python simulation using the LR-4 plant model.
-> *Execution log:* Not yet run. NOTE — depends on LR-4.
+> *Apparatus:* Dev PC, Python plant model.
+> *Execution log:* Not yet run. NOTE — depends on airframe CAD geometry for inertia estimates.
 
 > **TEST-CTL-011 — Return value matches internal mode selection**
 > *Purpose:* `control_law_update()` return value is always consistent with `out->mode`.
@@ -1279,8 +1278,8 @@ These verify platform-layer discipline by code review and static analysis. They 
 
 > **TEST-STR-004 — Full airframe static load test**
 > *Purpose:* Validate the assembled airframe withstands the bench load envelope with margin.
-> *Linked requirement(s):* D031; load envelope from LR-4.
-> *Procedure:* Apply the rated perturbation force (from LR-4) + 2× safety factor at the airframe body (representative of hand-held handling loads) and at the fin attachment points.
+> *Linked requirement(s):* D031; load envelope from airframe CAD dynamics analysis.
+> *Procedure:* Apply the rated perturbation force (from airframe CAD dynamics analysis) + 2× safety factor at the airframe body (representative of hand-held handling loads) and at the fin attachment points.
 > *Acceptance criteria:* Zero permanent deformation, zero cracking, zero joint loosening.
 > *Apparatus:* Assembled airframe, calibrated force applicator, calipers.
 > *Execution log:* Not yet run.
@@ -1327,11 +1326,11 @@ These verify platform-layer discipline by code review and static analysis. They 
 
 > **TEST-STR-010 — Mass properties verification**
 > *Purpose:* Assembled mass and CG match the CAD model within a justified tolerance.
-> *Linked requirement(s):* D031; CG threshold from LR-4.
+> *Linked requirement(s):* D031; CG threshold from airframe CAD dynamics analysis.
 > *Procedure:* Weigh the assembled article (without servo rail power); measure CG location on a balance fixture; compare both against CAD.
-> *Acceptance criteria:* Mass within ±5% of the CAD estimate. CG deviation acceptance threshold = **[TBD — pending LR-4]**. The threshold must NOT be an arbitrary number: LR-4 must include a CG sensitivity analysis answering how much CG deviation degrades stability margins to their minimum acceptable values; that number becomes the threshold, with its derivation chain documented. The earlier 10 mm placeholder is withdrawn and must not be used until LR-4 derives or replaces it.
+> *Acceptance criteria:* Mass within ±5% of the CAD estimate. CG deviation acceptance threshold = **[TBD — pending airframe CAD and dynamics analysis]**. The threshold must NOT be an arbitrary number: the airframe CAD dynamics analysis must include a CG sensitivity analysis answering how much CG deviation degrades stability margins to their minimum acceptable values; that number becomes the threshold, with its derivation chain documented. The earlier 10 mm placeholder is withdrawn and must not be used until that analysis derives or replaces it.
 > *Apparatus:* Assembled airframe, scale, CG balance fixture.
-> *Execution log:* Not yet run. BLOCKED on threshold — requires LR-4 CG sensitivity analysis.
+> *Execution log:* Not yet run. BLOCKED on threshold — requires CG sensitivity analysis from airframe CAD dynamics work.
 
 > **TEST-STR-011 — Cable routing clearance**
 > *Purpose:* No cable contacts a moving part across the full fin deflection range.
@@ -1406,7 +1405,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 # G1 ADDITIONS — Code Coverage (dev-PC — G1)
 
 > **TEST-COV-001 — Branch coverage measurement on algorithm modules**
-> *Purpose:* No algorithm module ships to HIL with untested branches.
+> *Purpose:* No algorithm module ships to hardware bring-up with untested branches.
 > *Linked requirement(s):* D045.
 > *Procedure:* Run the full dev-PC test harness under `gcov` (GCC `--coverage`); generate a coverage report; archive it dated.
 > *Acceptance criteria:* Branch coverage on `fdir.c`, `estimator.c`, `control_law.c`, `telemetry.c`, `c2.c`, `mode_fsm.c` each ≥ 90%.
@@ -1516,92 +1515,6 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Procedure:* Enter SYS_MODE_FLIGHT with a healthy estimator; inject an estimator fault mid-run (forces safe hold); send `CMD_RESET_ESTIMATOR`.
 > *Acceptance criteria:* After reset the system is in a clean state — it cannot re-enter FLIGHT until the estimator reconverges.
 > *Apparatus:* Dev-PC test harness.
-> *Execution log:* Not yet run.
-
----
-
-# G1.5 — Hardware-in-the-Loop (HIL) Simulation
-
-HIL runs the actual compiled MCU firmware against simulated sensor inputs injected from the dev PC over the wired UART transport. MCU outputs (telemetry frames) are captured and verified. This gate confirms the firmware behaves correctly against realistic dynamic inputs before any physical sensor is connected.
-
-> **TEST-HIL-001 — HIL infrastructure: deterministic replay**
-> *Purpose:* The same sensor input sequence produces bit-identical MCU output on repeated runs.
-> *Linked requirement(s):* TEST-EST-010; prerequisite for all HIL tests.
-> *Procedure:* Record a 10-second synthetic IMU/baro sequence; inject it twice with `estimator_reset()` between runs.
-> *Acceptance criteria:* Both captured telemetry logs bit-identical. Any non-determinism is a blocker.
-> *Apparatus:* STM32F407ZGT6, wired UART, dev-PC Python HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-002 — Nominal attitude tracking (static)**
-> *Purpose:* The estimator converges under realistic noise-corrupted synthetic data.
-> *Linked requirement(s):* REQ-EST-004.
-> *Procedure:* Inject synthetic IMU data with realistic noise (from the TEST-BMI-003/TEST-ICM-003 characterised distributions) representing a stationary level article.
-> *Acceptance criteria:* Estimator converges to |roll| < 1°, |pitch| < 1° within 5 seconds.
-> *Apparatus:* STM32F407ZGT6, wired UART, dev-PC HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-003 — Nominal attitude tracking (dynamic ramp)**
-> *Purpose:* The estimator tracks a slowly varying attitude in simulation.
-> *Linked requirement(s):* REQ-EST-006.
-> *Procedure:* Inject synthetic data representing a slow sinusoidal pitch oscillation (±10° at 0.5 Hz).
-> *Acceptance criteria:* Estimator tracks with lag < 50 ms and error < the REQ-EST-006 bound.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-004 — FDIR fault injection in simulation: IMU1 step fault**
-> *Purpose:* FDIR detects an injected fault in a running dynamic scenario.
-> *Linked requirement(s):* REQ-FDR-008.
-> *Procedure:* During the TEST-HIL-003 dynamic ramp, inject a sudden IMU1 bias of 50 °/s at a known tick.
-> *Acceptance criteria:* `imu1_healthy = false` appears in telemetry within the LR-3 detection latency bound; estimator transitions to `EST_MODE_IMU1_ONLY`.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-005 — FDIR fault injection in simulation: IMU2 step fault**
-> *Purpose:* Symmetric to TEST-HIL-004 for IMU2.
-> *Linked requirement(s):* REQ-FDR-008.
-> *Procedure:* Inject a sudden IMU2 bias during the dynamic ramp.
-> *Acceptance criteria:* `imu2_healthy = false` within the latency bound; estimator transitions to `EST_MODE_IMU2_ONLY`.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-006 — FDIR fault injection: dual IMU simultaneous fault**
-> *Purpose:* Simultaneous dual-IMU fault is handled in simulation.
-> *Linked requirement(s):* D024.
-> *Procedure:* Inject a large bias on both IMUs simultaneously.
-> *Acceptance criteria:* System enters `EST_MODE_DEAD_RECKONING`; covariance grows; control law enters `CTL_MODE_SAFE_HOLD`; no crash; all visible in captured telemetry.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness.
-> *Execution log:* Not yet run.
-
-> **TEST-HIL-007 — Control law response in closed-loop HIL (full authority)**
-> *Purpose:* The control loop through the MCU firmware and a simulated plant is stable at full authority.
-> *Linked requirement(s):* REQ-CTL-004 (from LR-4).
-> *Procedure:* Connect MCU actuator commands to a software plant model on the dev PC; the plant propagates state into the next synthetic IMU reading; apply a 10° step disturbance.
-> *Acceptance criteria:* System stabilises within the REQ-CTL-004 settling-time bound; no divergence.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness with closed-loop plant model (Python).
-> *Execution log:* Not yet run. NOTE — depends on LR-4.
-
-> **TEST-HIL-007B — Closed-loop stability in `CTL_MODE_3FIN_REDUCED`**
-> *Purpose:* The degraded 3-fin mixing matrix is dynamically stable, not merely analytically correct (CTL-006). Full-authority gain margins do not transfer to degraded geometry.
-> *Linked requirement(s):* D030, REQ-CTL-004.
-> *Procedure:* In the closed-loop HIL of TEST-HIL-007, assert an actuator fault (`CMD_FAULT_ACTUATOR_0`) so the control law enters `CTL_MODE_3FIN_REDUCED` BEFORE the step disturbance; apply the 10° step.
-> *Acceptance criteria:* Settles within the REQ-CTL-004 bound, no divergence, no sustained oscillation; gain margin > 6 dB and phase margin > 45° verified for the 3-fin configuration from a Bode plot.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness with closed-loop plant model.
-> *Execution log:* Not yet run. NOTE — depends on LR-4.
-
-> **TEST-HIL-007C — Closed-loop stability in `CTL_MODE_2FIN_REDUCED`**
-> *Purpose:* The 2-fin degraded configuration is dynamically stable, not merely analytically correct (CTL-007).
-> *Linked requirement(s):* D030, REQ-CTL-004.
-> *Procedure:* As TEST-HIL-007B, but assert two actuator faults so the control law enters `CTL_MODE_2FIN_REDUCED` before the step disturbance.
-> *Acceptance criteria:* Settles within the REQ-CTL-004 bound (or a documented relaxed 2-fin bound, if D-logged), no divergence; gain margin > 6 dB, phase margin > 45° verified for the 2-fin configuration. If the 2-fin configuration cannot meet stability margins, that is a finding that bounds what "2FIN_REDUCED" can honestly claim.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness with closed-loop plant model.
-> *Execution log:* Not yet run. NOTE — depends on LR-4.
-
-> **TEST-HIL-008 — Mode command round-trip in HIL**
-> *Purpose:* The C2 uplink path works correctly in the HIL environment.
-> *Linked requirement(s):* D020.
-> *Procedure:* Inject `CMD_SET_MODE_DEMO` over wired UART during a HIL run; then `CMD_SET_MODE_FLIGHT`.
-> *Acceptance criteria:* The next captured telemetry frame shows the commanded mode; round-trip latency ≤ 2 tick periods.
-> *Apparatus:* STM32F407ZGT6, dev-PC HIL harness.
 > *Execution log:* Not yet run.
 
 ---
@@ -1742,9 +1655,9 @@ These confirm the fault detection path fires correctly at the hardware level —
 > **TEST-PIP-001 — Synthetic input traced through every pipeline stage**
 > *Purpose:* A known synthetic input produces a correct, verifiable output at every intermediate stage and at the final actuator command.
 > *Linked requirement(s):* §4.2.
-> *Procedure:* Inject via HIL a precisely known synthetic IMU reading (e.g. pure 10 °/s roll, no noise); capture at each stage — (1) raw `imu_reading_t`, (2) `fdir_gate_result_t`, (3) `attitude_estimate_t`, (4) `actuator_cmd_t`, (5) telemetry frame on the GCS.
+> *Procedure:* Apply a precisely known physical input (e.g. orient the test stand to a known attitude); capture at each stage — (1) raw `imu_reading_t`, (2) `fdir_gate_result_t`, (3) `attitude_estimate_t`, (4) `actuator_cmd_t`, (5) telemetry frame on the GCS.
 > *Acceptance criteria:* Each intermediate value is consistent with the known input and the stage's documented contract. Any inconsistent intermediate value is a bug, not a calibration issue.
-> *Apparatus:* Full hardware setup with HIL injection, wired UART tap for intermediate logging, GCS.
+> *Apparatus:* Full hardware setup, wired UART tap for intermediate logging, GCS.
 > *Execution log:* Not yet run.
 
 > **TEST-PIP-002 — Pipeline latency: input to actuator command**
@@ -1760,7 +1673,7 @@ These confirm the fault detection path fires correctly at the hardware level —
 > *Linked requirement(s):* §4.2, §4.4.
 > *Procedure:* Inject an IMU1 fault (per TEST-PFLT-001); with the system in `EST_MODE_IMU1_ONLY`, repeat the TEST-PIP-001 synthetic-input trace using only IMU2 data.
 > *Acceptance criteria:* Each stage's output is consistent with single-IMU operation; degraded mode is visible at every stage (health flags propagate through the full pipeline).
-> *Apparatus:* Full hardware setup, HIL injection.
+> *Apparatus:* Full hardware setup.
 > *Execution log:* Not yet run.
 
 ---
@@ -1883,7 +1796,7 @@ These confirm the fault detection path fires correctly at the hardware level —
 > **TEST-SOK-002 — Timestamp rollover at UINT32_MAX**
 > *Purpose:* `platform_timer_us()` wraps at UINT32_MAX without a system fault, without corrupting FDIR staleness logic, and without the GCS misinterpreting the timestamp stream.
 > *Linked requirement(s):* D034.
-> *Procedure:* Initialise the TIM2 counter to UINT32_MAX − 1,000 (or inject pre-rollover timestamps via HIL); run through the rollover.
+> *Procedure:* Initialise the TIM2 counter to UINT32_MAX − 1,000 (via modified firmware preload); run through the rollover.
 > *Acceptance criteria:* FDIR staleness arithmetic produces no spurious fault on rollover; the GCS handles the rollover with no false gap detection; the system continues operating normally.
 > *Apparatus:* STM32F407ZGT6, modified firmware (TIM2 counter preload), GCS.
 > *Execution log:* Not yet run.
@@ -1905,7 +1818,7 @@ These go beyond the singular fault injection of G3. Each injects two or more ind
 > **TEST-CFI-001 — Simultaneous IMU1 fault + IMU2 fault**
 > *Purpose:* Two independent sensor faults injected simultaneously are both detected.
 > *Linked requirement(s):* D024.
-> *Procedure:* Physically disconnect both IMU SPI buses at the same instant (or inject both faults via HIL in the same tick).
+> *Procedure:* Physically disconnect both IMU SPI buses at the same instant.
 > *Acceptance criteria:* Both `imu1_healthy = false` and `imu2_healthy = false` appear within the detection latency bound; system enters `EST_MODE_DEAD_RECKONING`; covariance grows; no crash; neither fault masks the other.
 > *Apparatus:* Full hardware setup, GCS.
 > *Execution log:* Not yet run.
@@ -1956,8 +1869,7 @@ These go beyond the singular fault injection of G3. Each injects two or more ind
 
 These external dependencies must be completed before the tests they block can run. Ordering matters — each is listed with the earliest gate it blocks:
 
-- **LR-4 (vehicle dynamics)** — produces the plant model and the REQ-CTL-004 settling bound. Blocks TEST-CTL-010 (G1), TEST-HIL-007/007B/007C (G1.5), and the TEST-STR-010 CG threshold (G4). LR-4 depends on first-pass airframe CAD; both must complete before G1. Earliest and tightest dependency in the plan.
-- **LR-3 (FDIR innovation gating)** — produces the `CHI2_THRESHOLD_2DOF` derivation formula and detection-latency bound. Blocks TEST-CAL-001, TEST-FDR-007/010/015, TEST-HIL-004. Must complete before G1.
+- **LR-3 (FDIR innovation gating)** — produces the `CHI2_THRESHOLD_2DOF` derivation formula and detection-latency bound. Blocks TEST-CAL-001, TEST-FDR-007/010/015. Must complete before G1.
 - **D048 (NVIC interrupt priority scheme)** — `platform.h` scrutiny-session deliverable. Blocks TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2).
 - **`CMD_FAULT_ACTUATOR` family in `command_id_t`** — blocks TEST-C2-008 / PFLT-005 / INT-010 / FPP-002 / CFI-002 / CFI-005. Must land before G2 closes.
 - **`overrun_count` field in `telemetry_frame_t`** — blocks TEST-TEL-008 and the frame-verified TEST-INT-004 warning path. Bundle with the D047 implementation work.
