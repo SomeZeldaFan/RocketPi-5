@@ -441,3 +441,17 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 - Defer HIL indefinitely but keep it in scope — rejected; deferred scope that will never be executed is dead weight in every planning session. A clean removal is more honest.
 - Retain HIL as optional stretch goal — rejected; optional scope in a sprint model creates ambiguity about what "done" means. The three deliverables are sufficient and unambiguous.
 - Keep G1.5 gate as a software-only unit test gate without plant simulation — rejected; the gate as designed is specifically a closed-loop dynamic validation. Reusing the gate label for a different purpose introduces confusion. Affected tests are removed or repurposed individually.
+
+---
+
+## 2026-06-05
+
+### D052 — Control loop rate: 1000 Hz
+
+**Decision:** `AVIONICS_LOOP_RATE_HZ` = 1000 Hz. `IMU_STALENESS_THRESHOLD_US` = 5000 μs (5 × loop period).
+**Rationale:** Derived in LR-1 (2026-05-22). Disturbance bandwidth ceiling fixed at 10 Hz; required control bandwidth set at 5× = 50 Hz (14 dB attenuation at disturbance frequency); Franklin §11.2 Eq. (11.3) sampling rule ωs/ωBW ≥ 20 gives fs ≥ 1000 Hz. ZOH delay verified at 5.6% of rise time (< 10% Franklin criterion). Log-spaced MOI sweep across full build-weight range (0.0587–0.0793 kg·m²) confirms recommendation is stable — MOI does not enter the bandwidth calculation in the absence of aerodynamic fin effectiveness (bench-only, no airflow). Full derivation: `docs/derivations/LR-1-loop-rate.md`. Resolves REQ-SYS-011, REQ-EST-002, REQ-CTL-008. Unblocks LR-3.
+**Alternatives considered:**
+- 500 Hz (10× disturbance, 3× BW margin) — rejected; insufficient disturbance rejection margin and misaligned with D047 rationale which already assumes 1 kHz.
+- 2000 Hz (Franklin upper-range multiple 40×) — rejected; no control-quality benefit for a manual-perturbation bench system; increases compute risk unnecessarily.
+
+**Note on numbering:** D050 was reserved in `02-current-state.md` for the FDIR/estimator boundary resolution session (deferred). That reservation is superseded — the FDIR/estimator boundary will take the next free number when that session runs. The D050→D052 gap here is therefore deliberate, paralleling the D047→D049 gap that reserves D048 for the NVIC priority scheme.

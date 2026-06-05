@@ -40,6 +40,14 @@ The function is to not lose useful sources. When you're debugging a sensor at 2a
 - **NASA Technical Reports on additively-manufactured structural elements** — https://ntrs.nasa.gov
   *NASA Glenn and Langley have published on additively-manufactured (FDM and other) structural test results. Directly relevant to the FDM-printed airframe construction approach. Specific reports to be cataloged here as identified during airframe design.*
 
+## Control systems references (added 2026-05-22 per LR-1)
+
+- **Franklin, G. F., Powell, J. D., Workman, M. L., *Digital Control of Dynamic Systems*, 3rd ed.** — Addison-Wesley Longman, 1998. ISBN 0-201-33153-5.
+  *Authoritative reference for digital control of continuous-time systems. Ch. 11 (§11.2 pp. 451–453) covers sampling rate selection: Nyquist absolute bound (Eq. 11.1), practical smooth-response range 20 < ωs/ωBW < 40 (Eq. 11.2), and the ≤ 10% rise-time ZOH delay criterion (Eq. 11.3). Used in LR-1 to derive the 1000 Hz loop rate (D052). Will be re-referenced in LR-3 (FDIR innovation gating) and during control law design.*
+
+- **Beer, F. P., Johnston, E. R. Jr., *Vector Mechanics for Engineers: Dynamics*.**
+  *Standard rigid-body dynamics reference. Used in LR-1 for hollow-cylinder MOI formulae (transverse: $I_\perp = m[(r_o^2+r_i^2)/4 + L^2/12]$; axial; point-mass parallel-axis) during the airframe mass budget. Will be re-referenced for airframe structural analysis.*
+
 ---
 
 *Add references here as they're found.*

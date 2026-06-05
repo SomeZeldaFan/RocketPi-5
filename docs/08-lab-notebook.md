@@ -25,6 +25,29 @@ Reverse chronological — newest at the top — so the most recent context is im
 
 ## Entries
 
+## 2026-05-22
+
+**Session goal:** LR-1 — control loop rate derivation.
+
+**What I did:** Full mass budget and loop rate derivation. Result: 1000 Hz (D052). Disturbance bandwidth ceiling fixed at 10 Hz; required control bandwidth 5× = 50 Hz; Franklin §11.2 Eq. (11.3) sampling rule (ωs/ωBW ≥ 20) gives fs ≥ 1000 Hz. ZOH delay verified at 5.6% of rise time. MOI sweep across full build-weight range (0.0587–0.0793 kg·m²) confirms recommendation is stable. See `docs/derivations/LR-1-loop-rate.md` for the complete write-up.
+
+**What I observed / learned:**
+- Shell mass (971 g at 100 mm ID / 800 mm length, 3 mm PLA wall) dominates MOI in both build scenarios — 90.4% of the lower bound, 66.9% of the upper. Servo choice barely shifts the recommendation. Geometry decisions matter more than component selection for the mass budget.
+- The aerodynamics exclusion is doing the load-bearing work: with no airflow on the fins, MOI doesn't enter the bandwidth requirement at all. The loop rate is set by the human shoving the bench stand (10 Hz disturbance) and the digital-control sampling rule, full stop.
+- Franklin's 20× rule (Eq. 11.3) applied cleanly. The 5× control-bandwidth margin gives ~14 dB of disturbance rejection — comfortable headroom for bench manual perturbation.
+- 1000 Hz at 168 MHz with FPU leaves ~50% compute headroom per D043 (full tick < 500 μs). If the EKF or FDIR grows, there's room. 2000 Hz (Franklin's smooth upper range, 40×) adds no benefit here.
+
+**Where I got stuck:** DjVu copy of Franklin had a corrupted page at p. 242 — exactly where Ch. 11 begins. Wasted ~30 min before noticing. Resolved by obtaining a clean PDF.
+
+**Next session pickup:**
+1. LR-3 — FDIR innovation gating (now unblocked: LR-1 result + IMU datasheets).
+2. `platform.h` scrutiny session (logs D048 NVIC priority scheme; unblocks TEST-PLT-005 and TEST-PLT-HW-007).
+3. The four deferred bombs: FDIR/estimator boundary (D053?), `platform_safe_state()` layer violation, `CMD_FAULT_ACTUATOR` family, `overrun_count` field. Any of these can run in parallel.
+
+**Time spent:** ~3 hours.
+
+---
+
 ## 2026-05-19
 
 **Session goal:** Hardware component selection — MCU, dual IMUs, barometer, radio.

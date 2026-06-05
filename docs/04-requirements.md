@@ -114,10 +114,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-SYS-011 — Control loop rate**
-> The MCU control loop shall execute at ≥[TBD — pending LR-1] Hz.
+> The MCU control loop shall execute at ≥ 1000 Hz.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* LR-1 pending. Constraints §11.1 references "200+ Hz" as an MCU compute headroom requirement for MCU selection — that is an MCU selection bound, not a derived loop rate requirement. The correct loop rate must be derived from the expected closed-loop bandwidth of the system via sampling theory. Until LR-1 is complete, no number is committed.
+> *Rationale:* LR-1 complete (2026-05-22, D052). Derived from 10 Hz disturbance bandwidth × 5× control-bandwidth margin (50 Hz) × Franklin §11.2 Eq. (11.3) sampling rule (ωs/ωBW ≥ 20). ZOH delay verified at 5.6% of rise time (< 10% Franklin criterion). MOI sweep across full build-weight range confirms recommendation is stable. Full derivation: docs/derivations/LR-1-loop-rate.md.
 > *Verification:* Bench measurement — log MCU timer at entry and exit of each control loop iteration over a 60-second run; compute mean and minimum rate; confirm both exceed the TBD floor.
 
 ---
@@ -143,10 +143,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-EST-002 — Estimator update rate**
-> The attitude estimator shall produce attitude estimates at ≥[TBD — pending LR-1] Hz.
+> The attitude estimator shall produce attitude estimates at ≥ 1000 Hz.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* Follows REQ-SYS-011. The estimator output feeds the control law; the estimator must produce new estimates at the control loop rate. The specific rate is determined by LR-1 (control loop rate derivation).
+> *Rationale:* Follows REQ-SYS-011 (1000 Hz, D052). The estimator output feeds the control law; the estimator must produce new estimates at the control loop rate. LR-1 complete (2026-05-22). See docs/derivations/LR-1-loop-rate.md.
 > *Verification:* Bench measurement — log estimator output timestamps over 60 seconds; confirm mean and minimum rates exceed the TBD floor.
 
 ---
@@ -271,10 +271,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-CTL-008 — Control law computation deadline**
-> The control law computation, from estimator input read to actuator command write, shall complete within ≤[TBD — follows REQ-SYS-011] ms (one control loop period).
+> The control law computation, from estimator input read to actuator command write, shall complete within ≤ 1 ms (one control loop period).
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* Follows REQ-SYS-011. Missing a control loop deadline means the actuator command is computed against stale sensor data, introducing a latency spike that can destabilise the control loop. JPL Power of 10 discipline (bounded loops, no dynamic allocation) makes this deadline deterministic.
+> *Rationale:* Follows REQ-SYS-011 (1000 Hz → 1 ms loop period; D052, LR-1 complete). Missing a control loop deadline means the actuator command is computed against stale sensor data, introducing a latency spike that can destabilise the control loop. JPL Power of 10 discipline (bounded loops, no dynamic allocation) makes this deadline deterministic.
 > *Verification:* Bench measurement — instrument control law entry and exit with MCU timer; log execution time over 10,000 consecutive control cycles; confirm maximum execution time does not exceed one loop period.
 
 ---

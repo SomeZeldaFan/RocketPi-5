@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-06-05
 
 Live project status. Updated at the end of every work session.
 
@@ -39,10 +39,11 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 - **D043 logged (2026-05-20)** — scheduling model: bare-metal superloop with DMA + ISRs. FreeRTOS explicitly rejected. Five-reason rationale documented; alternatives considered.
 - **Software architecture §4 written and locked (2026-05-20)** — `docs/05-architecture.md §4`. Module decomposition, scheduling model with 12-step tick sequence, ISR table with volatile discipline, canonical type definitions, fault propagation chain with four invariants, module interface contracts, test harness strategy. GCS architecture explicitly deferred to its own session.
 - **Avionics scaffold complete (2026-05-20)** — layered directory structure (`hardware/`, `algorithm/`, `output/`, `orchestration/`). `avionics_types.h` (canonical types, `volatile_flag_t`, `AVIONICS_PROTOCOL_VERSION`), `isr_flags.h` (manifest of all ISR/main-loop boundary crossings), 12 module headers with real declarations + comment contracts, 12 stub `.c` files with PLACEHOLDER RETURN comments and zero functional code, `main.c` superloop skeleton expressing the 12-step tick sequence, `stm32f4xx_it.c` and `stm32f4xx_hal_msp.c` HAL stub files, 4 dev-PC test harness stubs.
+- **LR-1 complete (2026-05-22, D052)** — `AVIONICS_LOOP_RATE_HZ` = 1000 Hz locked; `IMU_STALENESS_THRESHOLD_US` = 5000 μs. Derived from 10 Hz disturbance bandwidth × 5× margin × Franklin Eq. (11.3) sampling rule. REQ-SYS-011, REQ-EST-002, REQ-CTL-008 resolved. LR-3 unblocked. Full write-up: `docs/derivations/LR-1-loop-rate.md`.
 
 ## What's in progress
 
-- **Literature reviews LR-2 and LR-3.** Now unblocked by D040. LR-2: MEMS IMU estimation accuracy — run against BMI160 and ICM-42688-P datasheets (noise density, Allan deviation, bias instability); produces steady-state EKF error bound in degrees. LR-3: FDIR innovation gating — requires LR-1 result and IMU noise specs; chi-squared threshold and detection latency.
+- **Literature reviews LR-2 and LR-3.** LR-2: MEMS IMU estimation accuracy — run against BMI160 and ICM-42688-P datasheets (noise density, Allan deviation, bias instability); produces steady-state EKF error bound in degrees. Unblocked by D040. LR-3: FDIR innovation gating — chi-squared threshold and detection latency. Unblocked by D040 + LR-1 (D052, 1000 Hz).
 - **Per-module header scrutiny sessions.** With the scaffold in place, each module header gets its own dedicated session to scrutinise the interface contract, type-check signatures against the fault propagation invariants, and lock the safe default returns currently marked as PLACEHOLDER. Headers do not move from scaffold to implementation-ready until they pass their scrutiny session.
 - **Airframe: structural design.** Begin CAD work — first-pass body geometry, avionics bay (dimensioned to selected components), fin pivot locations. Material/print-parameter coupon testing to follow before committing to full airframe prints.
 - **Pi 5 bring-up: VS Code Remote-SSH.** Final bring-up item — connect VS Code on dev laptop to Pi via Remote-SSH extension. Deferred from 2026-05-16 session.
@@ -51,14 +52,13 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 
 These tasks must be completed before the indicated requirements in docs/04-requirements.md can have their numerical values set. Each produces a written summary and a justified number recommendation. **Sequencing matters — see dependency notes.**
 
-- **LR-1 — Control loop rate** *(unblocks REQ-SYS-011, REQ-EST-002, REQ-CTL-008)*
-  Independent — can run now, no hardware dependency. Sampling theory applied to control systems. Determine the expected closed-loop bandwidth of a fin-stabilised rocket body under manual perturbation. Derive the minimum control loop rate from that bandwidth using the Nyquist criterion and engineering margin. Produce a justified Hz recommendation.
+- **LR-1 — Control loop rate** — **COMPLETE (2026-05-22, D052).** Result: 1000 Hz. See `docs/derivations/LR-1-loop-rate.md`.
 
 - **LR-2 — MEMS IMU estimation accuracy** *(unblocks REQ-EST-006, REQ-CTL-007)*
   **Requires IMU selection first.** Runs on real datasheet noise specs (noise density, Allan deviation, bias instability) for the selected chips — not class-level estimates. Determine what steady-state attitude accuracy is achievable with the chosen dual-IMU EKF configuration. Produce a justified RMS error bound in degrees.
 
 - **LR-3 — FDIR innovation gating design** *(unblocks REQ-FDR-008)*
-  **Requires both LR-1 and IMU selection.** Chi-squared consistency test design for dual-IMU cross-check. Window size and threshold selection — requires the loop rate (LR-1) and IMU noise specs (datasheets) as inputs. Characterise the tradeoff between false-positive rate and detection latency. Produce a justified detection latency bound in milliseconds.
+  **Unblocked — LR-1 complete (D052, 1000 Hz) and IMUs selected (D040).** Chi-squared consistency test design for dual-IMU cross-check. Window size and threshold selection — uses the loop rate (1000 Hz) and IMU noise specs (datasheets) as inputs. Characterise the tradeoff between false-positive rate and detection latency. Produce a justified detection latency bound in milliseconds.
 
 
 ### Deferred — must be tracked, not lost
@@ -85,14 +85,13 @@ Nothing blocked.
 
 ## Next concrete tasks
 
-1. **FDIR/estimator boundary resolution session** — close out the deferred boundary issue before either FDIR or the EKF can be implemented. Produces: revised function signatures for `fdir_update()`, `estimator_predict()`, `estimator_update()`; revised two-phase tick sequence in §4.2; a new decision entry logging the boundary decision (next free number — D044 was used for the airframe reinforcement boundary, D048 is reserved for the NVIC priority scheme, so this is D050).
+1. **FDIR/estimator boundary resolution session** — close out the deferred boundary issue before either FDIR or the EKF can be implemented. Produces: revised function signatures for `fdir_update()`, `estimator_predict()`, `estimator_update()`; revised two-phase tick sequence in §4.2; a new decision entry logging the boundary decision (next free number at session time — D048 remains reserved for the NVIC priority scheme, D052 was used for LR-1 loop rate).
 2. **Per-module header scrutiny sessions** — one session per header, deep review of contract, NULL semantics, safe defaults, and JPL compliance. Order suggested: `platform.h` (resolve watchdog scrutiny AND log D048 — the NVIC interrupt priority scheme — in the same session; TEST-PLT-005 and TEST-PLT-HW-007 depend on D048) → `bmi160.h` / `icm42688p.h` → `ms5611.h` → `sik_radio.h` → `actuators.h` → `telemetry.h` / `c2.h` → `mode_fsm.h` → `control_law.h` → algorithm-layer last (after FDIR/estimator boundary closes).
 3. **Build system session** — first blocker before any compilation. Produces: STM32CubeIDE project `.ioc` configured for STM32F407ZGT6, Makefile or CMake configuration that picks up the layered `avionics/inc` and `avionics/src` tree, dev-PC GCC configuration for the `avionics/test/` harnesses.
 4. **GCS session** — Python ground station decomposition deliberately deferred from the 2026-05-20 architecture session. Mirrors MCU decomposition: transport / protocol / parser / state model / dashboard / attitude viz / command sender / frame logger. Must implement runtime check of `protocol_version` field on every received frame.
-5. **LR-1 — Control loop rate** — independent of hardware; runs now. Produces a justified Hz recommendation to commit into REQ-SYS-011 and `AVIONICS_LOOP_RATE_HZ` in `avionics_types.h`.
-6. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
-7. **LR-3 — FDIR innovation gating** — unblocked by D040; requires LR-1 first. Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
-8. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Run material coupon prints as structural design firms up.
-9. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
-10. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
-11. **Servo finalisation** — after CAD provides torque and size requirements.
+5. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
+6. **LR-3 — FDIR innovation gating** — unblocked by D040 + LR-1 (D052, 1000 Hz). Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
+7. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Run material coupon prints as structural design firms up.
+8. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
+9. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
+10. **Servo finalisation** — after CAD provides torque and size requirements.

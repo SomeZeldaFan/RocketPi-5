@@ -45,11 +45,13 @@ typedef volatile uint8_t volatile_flag_t;
 #define AVIONICS_NUM_FINS        ((uint8_t)4U)
 #define AVIONICS_BARO_RATE_HZ    ((uint32_t)50U)
 
-/* TBD — LR-1: control loop rate from Nyquist analysis of expected closed-loop bandwidth */
-/* #define AVIONICS_LOOP_RATE_HZ */
+/* LR-1 (2026-05-22, D052): 1000 Hz — derived from 10 Hz disturbance bandwidth × 5× margin,
+ * Franklin sampling rule ωs/ωBW ≥ 20 (Ch. 11, Eq. 11.3). See docs/derivations/LR-1-loop-rate.md */
+#define AVIONICS_LOOP_RATE_HZ        ((uint32_t)1000U)
 
-/* TBD — LR-1: staleness threshold = 5 × sample interval at confirmed loop rate */
-/* #define IMU_STALENESS_THRESHOLD_US */
+/* LR-1 (2026-05-22, D052): 5 × loop period = 5 × 1000 μs = 5000 μs.
+ * A reading older than 5 loop cycles is stale regardless of sensor status. */
+#define IMU_STALENESS_THRESHOLD_US   ((uint32_t)5000U)
 
 /* TBD — LR-3: chi-squared threshold for 2-DOF innovation gate at chosen confidence level */
 /* #define CHI2_THRESHOLD_2DOF */
