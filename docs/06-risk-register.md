@@ -58,6 +58,15 @@ Removing TEST-HIL-004/005/006 eliminates the only pre-hardware tests that verifi
 *Mitigation:* G1 FDIR unit tests validate detection logic in isolation; physical fault injection during bench demo validates end-to-end. Budget calibration time for FDIR threshold tuning during G2/G3.
 *Last reviewed:* 2026-06-04
 
+## Sensor / estimation risks (added 2026-06-14 per D050)
+
+**R-YAW-01 — Yaw unobservable with 6-axis IMUs (no magnetometer)**
+The selected IMUs (BMI160, ICM-42688-P) are 6-axis (accelerometer + gyroscope). Gravity, sensed by the accelerometer, constrains roll and pitch but provides no absolute yaw/heading reference, so yaw is observable only through gyro integration and drifts without bound — the accelerometer correction that bounds roll/pitch cannot bound yaw. Surfaced during the FDIR/estimator boundary work (D050). Note: constraints §5 lists a "magnetometer disturbance" failure mode that the current hardware cannot exhibit — the scope statement and the selected hardware need reconciling.
+*Likelihood:* High (a property of the hardware, not a contingency). *Impact:* Medium (roll/pitch — the primary bench-perturbation axes — remain well-estimated; the yaw estimate degrades over time).
+*Status:* Open — deferred decision.
+*Mitigation:* Decide later between (a) adding a magnetometer to restore an absolute yaw reference — which also reopens the magnetometer-disturbance failure mode, suiting the fault-tolerance depth axis — or (b) scoping yaw to best-effort gyro-only and bounding the accuracy claim to roll/pitch.
+*Last reviewed:* 2026-06-14
+
 ---
 
 *Review the register at the start of each phase and after any significant procurement or integration milestone.*

@@ -199,8 +199,8 @@ Layers (bottom to top):
 | Radio driver | `hardware/sik_radio.c/h` | Hardware | UART+DMA ring buffer, raw byte RX/TX — no protocol logic |
 | ISR handlers | `hardware/stm32f4xx_it.c` | Hardware | HAL ISR callbacks: SPI DMA TC, I2C DMA TC, UART DMA RX, TIM2 |
 | MSP init | `hardware/stm32f4xx_hal_msp.c` | Hardware | HAL peripheral clock, GPIO, DMA configuration callbacks |
-| FDIR | `algorithm/fdir.c/h` | Algorithm | Staleness watchdog, bounds check, innovation gate, health flags |
-| Estimator | `algorithm/estimator.c/h` | Algorithm | EKF predict+update, degraded mode management, covariance |
+| FDIR | `algorithm/fdir.c/h` | Algorithm | Two-pass: admission (staleness, bounds, gyro-vs-gyro) + innovation gate; sole writer of health flags |
+| Estimator | `algorithm/estimator.c/h` | Algorithm | Two-phase EKF: predict (exports `predicted_readings_t`) + correct; degraded mode management; covariance |
 | Control law | `algorithm/control_law.c/h` | Algorithm | Attitude error → deflection commands, reconfigurable mixing matrix |
 | Actuators | `output/actuators.c/h` | Output | Deflection → PWM registers, hard clamp, safe-state command |
 | Telemetry | `output/telemetry.c/h` | Output (TX) | Downlink only: frame packing, CRC-16, dispatch to radio driver |
@@ -217,15 +217,17 @@ Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the contro
 [1]  bmi160_read()              — consume IMU-1 DMA buffer, attach TIM2 timestamp
 [2]  icm42688p_read()           — consume IMU-2 DMA buffer, attach TIM2 timestamp
 [3]  ms5611_service()           — barometer: poll every N ticks (~50 Hz, decimated internally)
-[4]  fdir_update()              — staleness check, bounds check, innovation gate → health_flags
-[5]  estimator_update()         — EKF predict+update; NULL pointers for isolated sensors
-[6]  control_law_update()       — attitude error → fin deflection commands
-[7]  actuators_write()          — deflection → PWM registers (hard-clamped to mode limits)
-[8]  telemetry_pack_and_send()  — pack downlink frame, CRC-16, queue to SiK DMA TX
-[9]  c2_receive()               — drain RX ring buffer, CRC validate, parse → command_frame_t
-[10] mode_fsm_update()          — consume parsed C2 command, update system mode, queue ack
-[11] platform_watchdog_kick()   — MCU IWDG hardware watchdog
-[12] tick_wait()                — spin until TIM2 sets tick flag
+[4]  fdir_admit()              — absolute checks (staleness, bounds, gyro-vs-gyro) → preliminary health_flags
+[5]  estimator_predict()       — propagate on admitted gyro → predicted_readings_t (NULL for an admitted-out gyro)
+[6]  fdir_gate()               — innovation gate vs predicted measurements → final health_flags (restrict-only)
+[7]  estimator_update()        — EKF correction on healthy channels; NULL pointers for isolated sensors
+[8]  control_law_update()       — attitude error → fin deflection commands
+[9]  actuators_write()          — deflection → PWM registers (hard-clamped to mode limits)
+[10] telemetry_pack_and_send()  — pack downlink frame, CRC-16, queue to SiK DMA TX
+[11] c2_receive()               — drain RX ring buffer, CRC validate, parse → command_frame_t
+[12] mode_fsm_update()          — consume parsed C2 command, update system mode, queue ack
+[13] platform_watchdog_kick()   — MCU IWDG hardware watchdog
+[14] tick_wait()                — spin until TIM2 sets tick flag
 ```
 
 **ISR responsibilities — flag-set only, never more than ~10 lines:**
@@ -310,10 +312,11 @@ Ground station dashboard
 2. An isolated sensor is passed as NULL to the estimator — not as zeroed data. NULL is unambiguous; zeroed data is not.
 3. `attitude_estimate_t.covariance` is mandatory in every output — a consumer that ignores it ignores the system's self-reported confidence. Absence of covariance propagation is a reviewer finding.
 4. `telemetry_frame_t` carries `health_flags_t` unconditionally — health state is never omitted from a downlink frame.
+5. FDIR writes `health_flags_t` in two passes: `fdir_admit` sets the preliminary verdict (pre-predict); `fdir_gate` may only restrict it (post-predict) and never resurrects a channel admission isolated. Both passes live in `fdir.c`; no other module writes health. (D050)
 
 ### 4.5 Module interface contracts
 
-**platform:** `platform_init()` — starts IWDG first, then configures clocks and peripherals. `platform_timer_us()` — reads TIM2, the authoritative time source (D034). `platform_watchdog_kick()` — callable from module init functions and main loop tick [11].
+**platform:** `platform_init()` — starts IWDG first, then configures clocks and peripherals. `platform_timer_us()` — reads TIM2, the authoritative time source (D034). `platform_watchdog_kick()` — callable from module init functions and main loop tick [13].
 
 **bmi160 / icm42688p:** `_init()`, `_read(imu_reading_t *out) → imu_status_t`. Caller checks status before using data.
 
@@ -321,9 +324,9 @@ Ground station dashboard
 
 **sik_radio:** `_init()`, `_rx_pending() → bool`, `_rx_read(command_frame_t *out) → bool`, `_tx_send(const telemetry_frame_t *frame) → bool`. Raw byte transport only — no protocol logic.
 
-**fdir:** `_init()`. `_update()` signature **intentionally incomplete** — FDIR/estimator boundary resolution required before implementation. See open task in `02-current-state.md`. Do not implement against the current stub signature.
+**fdir:** `_init()`. `_admit(imu1, imu2, baro, health_out, gate_out)` — absolute checks (staleness, bounds, gyro-vs-gyro), writes the preliminary health verdict; runs before `estimator_predict()`. `_gate(imu1, imu2, baro, predictions, health_inout, gate_out)` — innovation gate against the estimator's predicted measurements; restrict-only on health; runs after `estimator_predict()`. FDIR is the sole writer of `health_flags_t` and never imports the estimator (D050).
 
-**estimator:** `_init()`, `_reset()`. `_predict()` and `_update()` signatures **intentionally incomplete** — same boundary task. See open task. Do not implement against current stub signatures.
+**estimator:** `_init()`, `_reset()`. `_predict(imu1, imu2, predictions_out)` — propagates the a-priori state on the admitted gyro and exports `predicted_readings_t` for the gate; a gyro isolated by `fdir_admit` arrives as NULL. `_update(imu1, imu2, baro, health, out) → estimator_mode_t` — EKF correction on healthy channels only; NULL = isolated; covariance grows for any skipped channel (D050).
 
 **control_law:** `_init()`, `_update(est, health, sys_mode, out) → control_mode_t`. Reconfigures mixing matrix based on `health.actuator_healthy[4]`.
 

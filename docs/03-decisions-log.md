@@ -454,4 +454,19 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 - 500 Hz (10× disturbance, 3× BW margin) — rejected; insufficient disturbance rejection margin and misaligned with D047 rationale which already assumes 1 kHz.
 - 2000 Hz (Franklin upper-range multiple 40×) — rejected; no control-quality benefit for a manual-perturbation bench system; increases compute risk unnecessarily.
 
-**Note on numbering:** D050 was reserved in `02-current-state.md` for the FDIR/estimator boundary resolution session (deferred). That reservation is superseded — the FDIR/estimator boundary will take the next free number when that session runs. The D050→D052 gap here is therefore deliberate, paralleling the D047→D049 gap that reserves D048 for the NVIC priority scheme.
+**Note on numbering:** D050 is the FDIR/estimator boundary decision — logged below (2026-06-14), filling the slot that was held open for it. Its out-of-date-order number is the same reserved-slot mechanism that still holds D048 for the NVIC priority scheme (the D047→D049 gap).
+
+---
+
+## 2026-06-14
+
+### D050 — FDIR/estimator boundary: two-phase estimator + two-phase FDIR
+
+**Decision:** Resolve the FDIR/estimator boundary by splitting the estimator into `estimator_predict()` and `estimator_update()`, and FDIR into `fdir_admit()` and `fdir_gate()`, interleaved in the tick as `fdir_admit → estimator_predict → fdir_gate → estimator_update`. The estimator exports its predicted measurements as a new `predicted_readings_t` value, which orchestration passes into `fdir_gate()`; FDIR never imports the estimator. FDIR writes `health_flags_t` in two passes — `fdir_admit` sets the preliminary verdict; `fdir_gate` may only restrict it (set a channel unhealthy), never resurrect a channel admission isolated.
+**Rationale:** The innovation gate must compare each sensor reading against the EKF's predicted measurement (residual = z − h(x_pred)). That prediction lives in the estimator, but the algorithm-layer isolation rule forbids FDIR from importing it (FDIR is the single writer of health; a cycle would muddy that authority). Splitting the estimator lets predict run first and export the prediction as data — the gate becomes computable with the dependency direction preserved. Splitting FDIR is required because `estimator_predict` is gyro-driven: the absolute checks that need no prediction (staleness, bounds, gyro-vs-gyro) must run in `fdir_admit` BEFORE predict consumes the gyro; otherwise a faulty gyro poisons the prediction and the post-predict gate wrongly condemns a healthy accelerometer — cross-channel fault propagation, which violates the isolation guarantee (D026; the property TEST-FDR-013 checks). The model-relative innovation gate runs in `fdir_gate` after predict, where the prediction exists.
+**Alternatives considered:**
+- Monolithic FDIR after predict (`predict → fdir → update`, single FDIR call) — rejected; predict consumes the gyro before any FDIR check, so a gyro fault corrupts the prediction and the gate then mis-flags the accelerometer (cross-channel fault propagation).
+- Make `estimator_predict` internally robust to a bad gyro (clamp/reject inside the estimator) — rejected; puts health logic in the estimator, breaking the single-writer-of-health rule (architecture §4.4 invariant 1).
+- Three-step resolution without a separate admit pass — rejected for the same gyro-poisoning gap; this is the version the scaffold first anticipated and is superseded here.
+- Innovation-gate the barometer too (predicted altitude in `predicted_readings_t`) — deferred; baro stays correction-only this cycle and keeps its admit-pass staleness/bounds checks. Can be added later without changing the structure.
+**Note:** This work surfaced that the selected IMUs (BMI160, ICM-42688-P) are 6-axis (no magnetometer), so yaw is unobservable and drifts on the gyro alone. Logged as R-YAW-01 in the risk register and as a deferred item in `02-current-state.md`; out of scope for this decision.
