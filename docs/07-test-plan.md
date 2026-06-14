@@ -542,7 +542,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 # LAYER 2 — FDIR Unit Tests (dev-PC test harness — G1)
 
 > **TEST-FDR-001 — Staleness detection: IMU1**
-> *Purpose:* `fdir_update()` sets `imu1_healthy = false` when the IMU1 timestamp is stale.
+> *Purpose:* `fdir_admit()` sets `imu1_healthy = false` when the IMU1 timestamp is stale.
 > *Linked requirement(s):* REQ-FDR-001, `fdir.h` contract.
 > *Procedure:* Inject an `imu_reading_t` with `timestamp_us` = (current_time − IMU_STALENESS_THRESHOLD_US − 1).
 > *Acceptance criteria:* `health_out.imu1_healthy == false`.
@@ -590,33 +590,33 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Execution log:* Not yet run.
 
 > **TEST-FDR-007 — Innovation gate: both IMUs agree**
-> *Purpose:* No false positive when sensors agree.
-> *Linked requirement(s):* REQ-FDR-008, D024; requires `CHI2_THRESHOLD_2DOF` from LR-3.
-> *Procedure:* Inject IMU1 and IMU2 readings consistent within noise (chi-squared < `CHI2_THRESHOLD_2DOF`).
-> *Acceptance criteria:* `imu1_gate_open == true`, `imu2_gate_open == true`; both healthy.
+> *Purpose:* No false positive when sensors agree. Exercises `fdir_gate()` (post-predict).
+> *Linked requirement(s):* REQ-FDR-008, D024, D050; requires `CHI2_THRESHOLD_2DOF` from LR-3.
+> *Procedure:* Call `fdir_gate()` with IMU1/IMU2 readings consistent within noise and matching `predicted_readings_t` (chi-squared < `CHI2_THRESHOLD_2DOF`); preliminary health all-healthy.
+> *Acceptance criteria:* `imu1_gate_open == true`, `imu2_gate_open == true`; both remain healthy.
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
 > **TEST-FDR-008 — Innovation gate: IMU1 is outlier**
-> *Purpose:* The outlier IMU is isolated; the healthy IMU is retained.
-> *Linked requirement(s):* REQ-FDR-008, D024.
-> *Procedure:* Inject an IMU1 reading disagreeing with IMU2 by more than the threshold.
+> *Purpose:* The outlier IMU is isolated; the healthy IMU is retained. Exercises `fdir_gate()`.
+> *Linked requirement(s):* REQ-FDR-008, D024, D050.
+> *Procedure:* Call `fdir_gate()` with an IMU1 reading whose residual vs the prediction exceeds the threshold while IMU2 agrees.
 > *Acceptance criteria:* `imu1_gate_open == false`, `imu2_gate_open == true`; `imu1_healthy == false`, `imu2_healthy == true`.
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
 > **TEST-FDR-009 — Innovation gate: IMU2 is outlier**
-> *Purpose:* Symmetric to TEST-FDR-008 — IMU2 flagged, IMU1 retained.
-> *Linked requirement(s):* REQ-FDR-008, D024.
-> *Procedure:* Inject an IMU2 reading disagreeing with IMU1 by more than the threshold.
+> *Purpose:* Symmetric to TEST-FDR-008 — IMU2 flagged, IMU1 retained. Exercises `fdir_gate()`.
+> *Linked requirement(s):* REQ-FDR-008, D024, D050.
+> *Procedure:* Call `fdir_gate()` with an IMU2 reading whose residual vs the prediction exceeds the threshold while IMU1 agrees.
 > *Acceptance criteria:* `imu2_gate_open == false`, `imu1_gate_open == true`; `imu2_healthy == false`, `imu1_healthy == true`.
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
 > **TEST-FDR-010 — Detection latency within LR-3 bound**
-> *Purpose:* FDIR detects and isolates a fault within the specified detection latency.
-> *Linked requirement(s):* REQ-FDR-008; requires the latency bound from LR-3.
-> *Procedure:* Inject a fault at tick N; measure the tick at which isolation occurs.
+> *Purpose:* FDIR detects and isolates a fault within the specified detection latency, whether caught at `fdir_admit()` (stale/out-of-range) or `fdir_gate()` (innovation).
+> *Linked requirement(s):* REQ-FDR-008, D050; requires the latency bound from LR-3.
+> *Procedure:* Inject a fault at tick N; measure the tick at which isolation occurs across the admit→predict→gate sequence.
 > *Acceptance criteria:* `imu1_healthy == false` appears by tick N + (detection_latency_bound / tick_period). Pass only if within the bound.
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
@@ -664,7 +664,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-FDR-016 — NULL baro input handled**
 > *Purpose:* The function is safe when the baro pointer is NULL (isolated sensor).
 > *Linked requirement(s):* `fdir.h` contract.
-> *Procedure:* Call `fdir_update()` with NULL for baro.
+> *Procedure:* Call `fdir_admit()` with NULL for baro.
 > *Acceptance criteria:* No crash, no assert; `baro_healthy` set to false.
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
@@ -753,13 +753,13 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
-> **TEST-EST-011 — Two-phase tick sequence (post FDIR/estimator boundary resolution)**
-> *Purpose:* The `estimator_predict()` → `fdir_update(actuals, predictions)` → `estimator_update()` sequence produces the correct posterior.
-> *Linked requirement(s):* D044 boundary issue (current-state.md FDIR/estimator boundary).
-> *Procedure:* Run the two-phase tick; pass `_predict()` predicted measurements into `fdir_update()`; pass only healthy-flagged sensors to `_update()`.
-> *Acceptance criteria:* The innovation gate computes residual = actual − predicted; full sequence produces output equivalent to the analytical case TEST-EST-003.
+> **TEST-EST-011 — Staged tick sequence: admit → predict → gate → update (D050)**
+> *Purpose:* The `fdir_admit()` → `estimator_predict()` → `fdir_gate()` → `estimator_update()` sequence produces the correct posterior.
+> *Linked requirement(s):* D050 (FDIR/estimator boundary).
+> *Procedure:* Run the staged tick; `fdir_admit()` sets preliminary health; pass `estimator_predict()`'s `predicted_readings_t` into `fdir_gate()`; pass only healthy-flagged sensors (NULL for isolated) into `estimator_update()`.
+> *Acceptance criteria:* The gate computes residual = measured − predicted; `fdir_gate()` only restricts health (never resurrects an admitted-out channel); full sequence produces output equivalent to the analytical case TEST-EST-003.
 > *Apparatus:* Dev-PC test harness.
-> *Execution log:* Not yet run. NOTE — depends on the FDIR/estimator boundary resolution (signatures not yet final).
+> *Execution log:* Not yet run.
 
 > **TEST-EST-012 — `EST_MODE_FAULT` propagation**
 > *Purpose:* Downstream consumers handle `EST_MODE_FAULT` gracefully.
@@ -1663,7 +1663,7 @@ These confirm the fault detection path fires correctly at the hardware level —
 > **TEST-PIP-002 — Pipeline latency: input to actuator command**
 > *Purpose:* Total latency from sensor sample to actuator command is within the tick budget and documented.
 > *Linked requirement(s):* REQ-SYS-011.
-> *Procedure:* Toggle a GPIO when the IMU DMA transfer completes (step 1) and again when `actuators_write()` is called (step 7); measure the scope delta.
+> *Procedure:* Toggle a GPIO when the IMU DMA transfer completes (step 1) and again when `actuators_write()` is called (step 9); measure the scope delta.
 > *Acceptance criteria:* Delta < one tick period; exact measured latency documented (becomes the stated system latency in the architecture document).
 > *Apparatus:* STM32F407ZGT6, oscilloscope (two GPIO probes).
 > *Execution log:* Not yet run.
@@ -1683,7 +1683,7 @@ These confirm the fault detection path fires correctly at the hardware level —
 > **TEST-FPP-001 — Fault propagation trace: IMU1 fault → all downstream effects**
 > *Purpose:* A single injected fault propagates through every layer that should respond, and not into layers that should not.
 > *Linked requirement(s):* D024, §4.4.
-> *Procedure:* Inject an IMU1 fault; confirm each link of the chain — (1) `bmi160_read()` returns `IMU_BUS_ERROR`, (2) `fdir_update()` sets `imu1_healthy = false`, (3) `estimator_update()` receives NULL for imu1 and enters `EST_MODE_IMU1_ONLY`, (4) `control_law_update()` operates on the health flags, (5) `telemetry_pack_and_send()` includes `imu1_healthy = false`, (6) the GCS dashboard shows the IMU1 fault indicator.
+> *Procedure:* Inject an IMU1 fault; confirm each link of the chain — (1) `bmi160_read()` returns `IMU_BUS_ERROR`, (2) `fdir_admit()` sets `imu1_healthy = false`, (3) `estimator_update()` receives NULL for imu1 and enters `EST_MODE_IMU1_ONLY`, (4) `control_law_update()` operates on the health flags, (5) `telemetry_pack_and_send()` includes `imu1_healthy = false`, (6) the GCS dashboard shows the IMU1 fault indicator.
 > *Acceptance criteria:* Every link confirmed, not inferred.
 > *Apparatus:* Full hardware setup, intermediate UART logging, GCS.
 > *Execution log:* Not yet run.
