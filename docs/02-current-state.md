@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-14
 
 Live project status. Updated at the end of every work session.
 
@@ -25,7 +25,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 
 - Phase 0 complete — project shape, depth axis, scope, and principles all locked.
 - Constraints document locked at v1.1 (v1.0: §4 updated for Phase 1 decisions; v1.1: §10.7 validation-before-implementation principle added).
-- Decisions log populated: D001–D049 (D048 reserved — to be logged in the `platform.h` scrutiny session).
+- Decisions log populated: D001–D052 (D048 reserved — NVIC priority scheme, to be logged in the `platform.h` scrutiny session; D050 logged 2026-06-14 — FDIR/estimator boundary).
 - Coding standard locked: NASA JPL Power of 10.
 - **Test plan fully populated (2026-05-21)** — `docs/07-test-plan.md` carries the complete test enumeration (build artifact, platform, all five sensor/peripheral bring-ups, FDIR/estimator/control-law/telemetry/C2/FSM unit tests, code coverage, boundary cases, exhaustive FSM coverage, power, bus contention, per-peripheral and concurrent fault injection, pipeline integrity, fault propagation, reboot recovery, timing margin, watchdog recovery, soak) and the non-bypassable G0–G4 gate structure. Tests are written before the modules they test (D045).
 - **D044–D049 logged.** D044: airframe reinforcement boundary revised. D045: test protocol and gate structure. D046: actuator fault detection — operator-asserted (no servo feedback path). D047: loop overrun policy — warn, halt on 3 consecutive. D049: FSM responds to sensing health only, not actuator health.
@@ -40,6 +40,7 @@ Pi 5 bring-up complete (DietPi v10.3.3, kernel 6.18.29, SSH access confirmed, GP
 - **Software architecture §4 written and locked (2026-05-20)** — `docs/05-architecture.md §4`. Module decomposition, scheduling model with 12-step tick sequence, ISR table with volatile discipline, canonical type definitions, fault propagation chain with four invariants, module interface contracts, test harness strategy. GCS architecture explicitly deferred to its own session.
 - **Avionics scaffold complete (2026-05-20)** — layered directory structure (`hardware/`, `algorithm/`, `output/`, `orchestration/`). `avionics_types.h` (canonical types, `volatile_flag_t`, `AVIONICS_PROTOCOL_VERSION`), `isr_flags.h` (manifest of all ISR/main-loop boundary crossings), 12 module headers with real declarations + comment contracts, 12 stub `.c` files with PLACEHOLDER RETURN comments and zero functional code, `main.c` superloop skeleton expressing the 12-step tick sequence, `stm32f4xx_it.c` and `stm32f4xx_hal_msp.c` HAL stub files, 4 dev-PC test harness stubs.
 - **LR-1 complete (2026-05-22, D052)** — `AVIONICS_LOOP_RATE_HZ` = 1000 Hz locked; `IMU_STALENESS_THRESHOLD_US` = 5000 μs. Derived from 10 Hz disturbance bandwidth × 5× margin × Franklin Eq. (11.3) sampling rule. REQ-SYS-011, REQ-EST-002, REQ-CTL-008 resolved. LR-3 unblocked. Full write-up: `docs/derivations/LR-1-loop-rate.md`.
+- **FDIR/estimator boundary resolved (2026-06-14, D050)** — two-phase estimator (`estimator_predict`/`estimator_update`) + two-phase FDIR (`fdir_admit`/`fdir_gate`), interleaved admit→predict→gate→update; new `predicted_readings_t` carries the estimator's predicted measurements to the gate as data (no estimator import). FDIR writes health in two passes (admit preliminary, gate restrict-only). Architecture §4.1/§4.2/§4.4/§4.5 updated and signatures locked. Unblocks the EKF and FDIR innovation-gate implementations and TEST-EST-011.
 
 ## What's in progress
 
@@ -77,7 +78,7 @@ These items were explicitly deferred during the 2026-05-20 coding framework sess
 
 - **`platform_safe_state()` layer violation** — function removed from `platform.h` (was in earlier draft of the plan). Hardware layer cannot include output layer headers; the question of how a hardware-layer assertion drives the actuators to a safe state is unresolved. Options: HAL register write that bypasses `actuators.c`; callback registered at init; assert handler in `main.c` calls `actuators_safe()` directly before halting. Decision needed before any path that fires `platform_safe_state()` is implemented.
 
-- **FDIR/estimator boundary — predicted measurement routing** — Both `avionics/inc/algorithm/fdir.h` and `avionics/inc/algorithm/estimator.h` carry explicit WARNING comments at their function declarations. The current `fdir_update()` signature has no input for the EKF's predicted measurements, which makes the innovation gate uncomputable without violating the algorithm-layer isolation rule (FDIR cannot import from the estimator). Resolution pattern: split the estimator into `_predict()` and `_update()` and use a two-phase tick: predict → fdir → update. This must be resolved before either the EKF or the FDIR innovation gate is implemented.
+- **Yaw observability — no magnetometer (2026-06-14)** — the selected IMUs (BMI160, ICM-42688-P) are 6-axis (accel + gyro); gravity pins roll/pitch but gives no yaw reference, so heading drifts on the gyro alone (unbounded). Constraints §5 lists a "magnetometer disturbance" failure mode the current hardware cannot exhibit — reconcile. Options: add a magnetometer (reopens the mag-disturbance failure mode, which suits the depth axis) or scope yaw to best-effort gyro-only. Logged as R-YAW-01. Decision deferred.
 
 ## What's blocked
 
@@ -85,13 +86,12 @@ Nothing blocked.
 
 ## Next concrete tasks
 
-1. **FDIR/estimator boundary resolution session** — close out the deferred boundary issue before either FDIR or the EKF can be implemented. Produces: revised function signatures for `fdir_update()`, `estimator_predict()`, `estimator_update()`; revised two-phase tick sequence in §4.2; a new decision entry logging the boundary decision (next free number at session time — D048 remains reserved for the NVIC priority scheme, D052 was used for LR-1 loop rate).
-2. **Per-module header scrutiny sessions** — one session per header, deep review of contract, NULL semantics, safe defaults, and JPL compliance. Order suggested: `platform.h` (resolve watchdog scrutiny AND log D048 — the NVIC interrupt priority scheme — in the same session; TEST-PLT-005 and TEST-PLT-HW-007 depend on D048) → `bmi160.h` / `icm42688p.h` → `ms5611.h` → `sik_radio.h` → `actuators.h` → `telemetry.h` / `c2.h` → `mode_fsm.h` → `control_law.h` → algorithm-layer last (after FDIR/estimator boundary closes).
-3. **Build system session** — first blocker before any compilation. Produces: STM32CubeIDE project `.ioc` configured for STM32F407ZGT6, Makefile or CMake configuration that picks up the layered `avionics/inc` and `avionics/src` tree, dev-PC GCC configuration for the `avionics/test/` harnesses.
-4. **GCS session** — Python ground station decomposition deliberately deferred from the 2026-05-20 architecture session. Mirrors MCU decomposition: transport / protocol / parser / state model / dashboard / attitude viz / command sender / frame logger. Must implement runtime check of `protocol_version` field on every received frame.
-5. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
-6. **LR-3 — FDIR innovation gating** — unblocked by D040 + LR-1 (D052, 1000 Hz). Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
-7. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Run material coupon prints as structural design firms up.
-8. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
-9. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
-10. **Servo finalisation** — after CAD provides torque and size requirements.
+1. **Per-module header scrutiny sessions** — one session per header, deep review of contract, NULL semantics, safe defaults, and JPL compliance. Order suggested: `platform.h` (resolve watchdog scrutiny AND log D048 — the NVIC interrupt priority scheme — in the same session; TEST-PLT-005 and TEST-PLT-HW-007 depend on D048) → `bmi160.h` / `icm42688p.h` → `ms5611.h` → `sik_radio.h` → `actuators.h` → `telemetry.h` / `c2.h` → `mode_fsm.h` → `control_law.h` → algorithm-layer last (`fdir.h` / `estimator.h`, now that the boundary is closed under D050).
+2. **Build system session** — first blocker before any compilation. Produces: STM32CubeIDE project `.ioc` configured for STM32F407ZGT6, Makefile or CMake configuration that picks up the layered `avionics/inc` and `avionics/src` tree, dev-PC GCC configuration for the `avionics/test/` harnesses.
+3. **GCS session** — Python ground station decomposition deliberately deferred from the 2026-05-20 architecture session. Mirrors MCU decomposition: transport / protocol / parser / state model / dashboard / attitude viz / command sender / frame logger. Must implement runtime check of `protocol_version` field on every received frame.
+4. **LR-2 — MEMS IMU estimation accuracy** — unblocked by D040. Run against BMI160 and ICM-42688-P datasheets. Produces steady-state EKF error bound in degrees (unblocks REQ-EST-006, REQ-CTL-007).
+5. **LR-3 — FDIR innovation gating** — unblocked by D040 + LR-1 (D052, 1000 Hz). Produces detection latency bound and `CHI2_THRESHOLD_2DOF` value (unblocks REQ-FDR-008).
+6. **Begin airframe CAD** — first-pass body geometry, avionics bay dimensioned to selected components, fin pivot locations. Run material coupon prints as structural design firms up.
+7. **Pi 5: VS Code Remote-SSH setup** — install Remote-SSH extension in VS Code, configure ~/.ssh/config entry for the Pi, connect and verify Pi filesystem is accessible from the laptop.
+8. **Compose the formal system block diagram** — referenced as deferred in `docs/05-architecture.md` §1. Choose diagramming methodology appropriate for the documentation standard.
+9. **Servo finalisation** — after CAD provides torque and size requirements.
