@@ -29,10 +29,11 @@
  *   - Hardware drivers next, in stable order. Each _init() pets the watchdog
  *     on completion (kick is inside the driver's _init, not here).
  *   - Algorithm modules next, then output, then orchestration.
- *   - Loop body executes the 12 tick steps in the architectural order.
- *     The order is load-bearing: FDIR runs before estimator so the estimator
- *     sees authoritative health flags; estimator before control law so the
- *     law sees the latest attitude; etc.
+ *   - Loop body executes the 14 tick steps in the architectural order (D050).
+ *     The order is load-bearing: FDIR admission runs before predict so a bad
+ *     gyro cannot poison the prediction; the gate runs after predict so it has
+ *     the predicted measurements; estimator correct runs after the gate so it
+ *     sees the final health flags; control law after that; etc.
  */
 
 int main(void)
@@ -57,6 +58,7 @@ int main(void)
     static baro_reading_t      baro;
     static health_flags_t      health;
     static fdir_gate_result_t  gate;
+    static predicted_readings_t pred;
     static attitude_estimate_t estimate;
     static actuator_cmd_t      cmd;
     static command_frame_t     c2_cmd;
@@ -72,36 +74,50 @@ int main(void)
         /* [3] Service the barometer state machine (decimated to ~50 Hz internally). */
         (void)ms5611_service(&baro);
 
-        /* [4] FDIR: staleness, bounds, innovation gate → health flags. */
-        fdir_update(&imu1, &imu2, &baro, &health, &gate);
+        /* [4] FDIR admission: absolute checks (staleness, bounds, gyro-vs-gyro)
+         *     → preliminary health flags. Vets the gyro before predict uses it. */
+        fdir_admit(&imu1, &imu2, &baro, &health, &gate);
 
-        /* [5] Estimator: predict+update with healthy sensors. NULL = isolated.
-         *     Real implementation will use the health flags to choose NULL
-         *     vs the actual pointer per sensor. */
-        (void)estimator_update(&imu1, &imu2, &baro, &health, &estimate);
+        /* [5] Estimator predict: propagate on the admitted gyro and export the
+         *     predicted measurements for the gate. NULL for a gyro the
+         *     admission pass rejected (post-admit verdict). */
+        const imu_reading_t *pre_imu1 = health.imu1_healthy ? &imu1 : (const imu_reading_t *)0;
+        const imu_reading_t *pre_imu2 = health.imu2_healthy ? &imu2 : (const imu_reading_t *)0;
+        estimator_predict(pre_imu1, pre_imu2, &pred);
 
-        /* [6] Control law: attitude error → deflection commands.
-         *     Reads system mode from mode_fsm (set by previous tick's [10]). */
+        /* [6] FDIR gate: innovation gate of each reading vs its prediction
+         *     → final health flags (restrict-only). */
+        fdir_gate(&imu1, &imu2, &baro, &pred, &health, &gate);
+
+        /* [7] Estimator correct: Kalman update on healthy channels only.
+         *     NULL = isolated (post-gate verdict). */
+        const imu_reading_t  *est_imu1 = health.imu1_healthy ? &imu1 : (const imu_reading_t *)0;
+        const imu_reading_t  *est_imu2 = health.imu2_healthy ? &imu2 : (const imu_reading_t *)0;
+        const baro_reading_t *est_baro = health.baro_healthy ? &baro : (const baro_reading_t *)0;
+        (void)estimator_update(est_imu1, est_imu2, est_baro, &health, &estimate);
+
+        /* [8] Control law: attitude error → deflection commands.
+         *     Reads system mode from mode_fsm (set by previous tick's [12]). */
         (void)control_law_update(&estimate, &health, mode_fsm_get(), &cmd);
 
-        /* [7] Actuators: clamp to mode limits, write PWM. */
+        /* [9] Actuators: clamp to mode limits, write PWM. */
         actuators_write(&cmd);
 
-        /* [8] Telemetry: pack downlink frame, CRC, queue to SiK DMA TX. */
+        /* [10] Telemetry: pack downlink frame, CRC, queue to SiK DMA TX. */
         telemetry_pack_and_send(&imu1, &imu2, &baro, &estimate, &cmd, &health, mode_fsm_get());
 
-        /* [9] + [10] C2 receive and Mode FSM update. The parsed command is
-         *           passed straight to mode_fsm; NULL if no frame this tick. */
+        /* [11] + [12] C2 receive and Mode FSM update. The parsed command is
+         *            passed straight to mode_fsm; NULL if no frame this tick. */
         if (c2_receive(&c2_cmd)) {
             (void)mode_fsm_update(&c2_cmd, &health);
         } else {
             (void)mode_fsm_update((const command_frame_t *)0, &health);
         }
 
-        /* [11] Watchdog kick — main-loop heartbeat. */
+        /* [13] Watchdog kick — main-loop heartbeat. */
         platform_watchdog_kick();
 
-        /* [12] Wait for next tick. Real implementation will spin on
+        /* [14] Wait for next tick. Real implementation will spin on
          *      tick_flag (set by TIM2 update ISR), clear it atomically,
          *      and check for overrun (TIM2 elapsed > loop period since
          *      previous tick entry → assert and halt to safe state).

@@ -164,6 +164,21 @@ typedef struct {
 } fdir_gate_result_t;
 
 /*
+ * predicted_readings_t — the estimator's a-priori predicted measurements,
+ * produced by estimator_predict() and consumed by fdir_gate() for the
+ * innovation gate. Crosses the algorithm-layer boundary as a VALUE: FDIR reads
+ * this struct, it never imports the estimator. Per-IMU predicted accelerometer
+ * vector = gravity direction rotated into the body frame given the predicted
+ * orientation; the gate forms residual = measured - predicted. Baro is
+ * correction-only this cycle — no predicted altitude field. (D050)
+ */
+typedef struct {
+    float    imu1_accel_pred_mss[3];
+    float    imu2_accel_pred_mss[3];
+    uint32_t timestamp_us;
+} predicted_readings_t;
+
+/*
  * health_flags_t — authoritative per-channel health state.
  * Written exclusively by FDIR. Read by estimator, control law, telemetry.
  * No module other than FDIR sets these fields.
