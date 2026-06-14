@@ -3,36 +3,28 @@
 /*
  * fdir.c — STUB
  *
- * ============================================================================
- * WARNING — DEFERRED BOUNDARY ISSUE — DO NOT IMPLEMENT AGAINST CURRENT SIGNATURE
- * ============================================================================
- * The fdir_update() signature in this file is INCOMPLETE. The innovation gate
- * needs predicted measurements from the estimator's prediction step (residual
- * = z - H*x_pred), which are not provided by the current interface.
+ * Two-pass FDIR (D050): fdir_admit() runs the absolute checks before
+ * estimator_predict(); fdir_gate() runs the innovation gate after it. FDIR is
+ * the sole writer of health_flags_t and never imports the estimator — it
+ * consumes the estimator's predictions as a predicted_readings_t value.
  *
- * Resolving the boundary requires a two-phase tick:
- *   tick A: estimator_predict()    → predicted_readings_t
- *   tick B: fdir_update(actuals, predictions, health_out, gate_out)
- *   tick C: estimator_update(actuals, health_out)
- *
- * Tracked as an open task in docs/02-current-state.md.
- * Do not begin implementing FDIR logic against the current signature.
- * ============================================================================
- *
- * When the boundary is resolved, this module will implement:
- *   - Staleness watchdog: per-sensor "last seen" timestamp check against
- *     IMU_STALENESS_THRESHOLD_US (TBD from LR-1).
- *   - Bounds check: range-check accel, gyro, pressure values against the
- *     physically plausible envelope; trip per-channel health flag on violation.
- *   - Innovation gate: chi-squared cross-check between IMU-1 / IMU-2 against
- *     the EKF prediction, threshold CHI2_THRESHOLD_2DOF (TBD from LR-3).
- *   - Health flag propagation: write health_flags_t, write fdir_gate_result_t.
+ * When implemented, this module will provide:
+ *   fdir_admit():
+ *     - staleness watchdog: per-sensor timestamp age vs IMU_STALENESS_THRESHOLD_US
+ *     - bounds check: accel / gyro / pressure vs the physical envelope, NaN, sat
+ *     - gyro cross-check: IMU-1 vs IMU-2 gyro agreement (no prediction needed)
+ *     - writes the preliminary health verdict + staleness fields of the result
+ *   fdir_gate():
+ *     - innovation gate: chi-squared test of residual = z - h(x_pred) against
+ *       CHI2_THRESHOLD_2DOF (TBD from LR-3); isolates the outlier
+ *     - restrict-only on health (never resurrects an admitted-out channel)
+ *     - writes the chi-squared / gate-open fields of the result
  */
 
 void fdir_init(void)
 {
-    /* Real implementation: clear internal staleness tracking, set all health
-     * flags to true initially (any sensor must prove unhealthy to be flagged). */
+    /* Real implementation: clear staleness tracking; set all health flags true
+     * initially (a sensor must prove unhealthy to be flagged). */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -42,7 +34,7 @@ void fdir_init(void)
      */
 }
 
-void fdir_update(
+void fdir_admit(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
     const baro_reading_t *baro,
@@ -50,9 +42,8 @@ void fdir_update(
     fdir_gate_result_t   *gate_out
 )
 {
-    /* SIGNATURE INTENTIONALLY INCOMPLETE — see WARNING at top of file.
-     * Real implementation deferred until the FDIR/estimator boundary task
-     * is closed. */
+    /* Real implementation: absolute checks (staleness, bounds, gyro-vs-gyro)
+     * → preliminary health_out + staleness fields of gate_out. */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -64,5 +55,31 @@ void fdir_update(
     (void)imu2;
     (void)baro;
     (void)health_out;
+    (void)gate_out;
+}
+
+void fdir_gate(
+    const imu_reading_t        *imu1,
+    const imu_reading_t        *imu2,
+    const baro_reading_t       *baro,
+    const predicted_readings_t *predictions,
+    health_flags_t             *health_inout,
+    fdir_gate_result_t         *gate_out
+)
+{
+    /* Real implementation: innovation gate of each reading vs its prediction
+     * → restrict health_inout; write chi-squared / gate-open fields. */
+
+    /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
+     * This value has not been reviewed for correctness or safety.
+     * Do not rely on this stub's output for any system behavior.
+     * Safe default will be defined and justified during the
+     * per-module scrutiny session for this file.
+     */
+    (void)imu1;
+    (void)imu2;
+    (void)baro;
+    (void)predictions;
+    (void)health_inout;
     (void)gate_out;
 }

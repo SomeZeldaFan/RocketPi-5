@@ -29,7 +29,7 @@ extern volatile_flag_t imu2_data_ready;
 /* I2C DMA TC ISR (barometer) sets; main loop reads at tick [3] */
 extern volatile_flag_t baro_data_ready;
 
-/* TIM2 update ISR sets; main loop reads at tick [12] (tick_wait) */
+/* TIM2 update ISR sets; main loop reads at tick [14] (tick_wait) */
 extern volatile_flag_t tick_flag;
 
 #endif /* ISR_FLAGS_H */
