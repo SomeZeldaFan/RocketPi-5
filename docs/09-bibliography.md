@@ -48,6 +48,11 @@ The function is to not lose useful sources. When you're debugging a sensor at 2a
 - **Beer, F. P., Johnston, E. R. Jr., *Vector Mechanics for Engineers: Dynamics*.**
   *Standard rigid-body dynamics reference. Used in LR-1 for hollow-cylinder MOI formulae (transverse: $I_\perp = m[(r_o^2+r_i^2)/4 + L^2/12]$; axial; point-mass parallel-axis) during the airframe mass budget. Will be re-referenced for airframe structural analysis.*
 
+## Hardware / MCU references (added 2026-06-17 per D048/D053)
+
+- **STMicroelectronics, *STM32F405xx / STM32F407xx datasheet* (DS8626)** — `datasheets/STM32F4xx.pdf`.
+  *Electrical characteristics and clock-tree reference for the selected MCU (STM32F407ZGT6). Used in the `platform.h` scrutiny session: the LSI oscillator spec (17 kHz min / 32 kHz typ / 47 kHz max) sets the IWDG timeout band (D053 A2); the "Characteristics of TIMx connected to the APB1 domain" table (p.122) gives fTIMxCLK = 84 MHz when the APB1 prescaler ≠ 1, which together with APB1 ≤ 42 MHz justifies the TIM2 prescaler 83 → 1 MHz → count == µs derivation (D053 C6). The APB-domain max-frequency text (AHB 168 MHz / APB2 84 MHz / APB1 42 MHz) anchors the clock-tree config.*
+
 ---
 
 *Add references here as they're found.*

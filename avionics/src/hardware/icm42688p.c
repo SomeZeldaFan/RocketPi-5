@@ -25,7 +25,7 @@ void icm42688p_init(void)
 {
     /*
      * Real implementation: configure SPI2+DMA, init ICM-42688-P registers,
-     * arm interrupts, then platform_watchdog_kick() before returning.
+     * arm interrupts. Does NOT kick the watchdog (no per-_init() kicks, D053 A3).
      */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.

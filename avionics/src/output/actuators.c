@@ -26,7 +26,7 @@
 void actuators_init(void)
 {
     /* Real implementation: configure PWM peripheral, set all channels to
-     * neutral (zero deflection), start PWM output, kick watchdog. */
+     * neutral (zero deflection), start PWM output. No watchdog kick (D053 A3). */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.

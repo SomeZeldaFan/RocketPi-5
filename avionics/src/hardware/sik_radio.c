@@ -24,7 +24,7 @@ void sik_radio_init(void)
 {
     /*
      * Real implementation: configure UART1+DMA circular RX, prepare TX DMA
-     * stream (not started until first sik_radio_tx_send), kick watchdog.
+     * stream (not started until first sik_radio_tx_send). No watchdog kick (D053 A3).
      */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.

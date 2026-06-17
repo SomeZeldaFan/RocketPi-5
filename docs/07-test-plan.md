@@ -89,11 +89,11 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Apparatus:* Dev PC, grep.
 > *Execution log:* Not yet run.
 
-> **TEST-PLT-002 — Watchdog kick present in every `_init()` and at tick [11]**
-> *Purpose:* Watchdog architecture implemented correctly — every `_init()` kicks on completion, main loop kicks at tick [11].
-> *Linked requirement(s):* D043; `platform.h` watchdog discipline.
-> *Procedure:* Grep all `_init()` function bodies for `platform_watchdog_kick()`. Confirm `main.c` tick [11] calls it.
-> *Acceptance criteria:* All 12 `_init()` functions call the kick before returning; `main.c` tick [11] calls it; no other call sites (kick not buried in algorithm code).
+> **TEST-PLT-002 — Watchdog kicked only at boot-complete and tick [13]; never in any `_init()`**
+> *Purpose:* Watchdog kick placement matches D053 A3 — no `_init()` kicks the watchdog (a per-init kick would mask a hang that strikes *after* that module's kick); the kick fires once at the boot-complete boundary in `main.c` (after all `_init()` return, before the loop) and then every main-loop iteration at tick [13].
+> *Linked requirement(s):* D043; D053 A3; `platform.h` watchdog discipline.
+> *Procedure:* Grep all `_init()` function bodies for `platform_watchdog_kick()` (expect none). Confirm exactly one boot-complete call in `main.c` before `for(;;)`, and the tick [13] call inside the loop.
+> *Acceptance criteria:* Zero `_init()` bodies call the kick; `main.c` has exactly one boot-complete kick before the loop and the tick [13] kick inside it; no other call sites (kick not buried in algorithm code).
 > *Apparatus:* Dev PC, grep.
 > *Execution log:* Not yet run.
 
@@ -119,7 +119,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Procedure:* Read every `NVIC_SetPriority` (or HAL equivalent) call in `platform.c`. Cross-reference each against the D048 scheme. Confirm the scheme is documented in a `platform.c`/`platform.h` comment block and in `docs/05-architecture.md §4`.
 > *Acceptance criteria:* Every priority value matches the D048 scheme. The TIM2 tick ISR and DMA TC ISRs have a defined relative ordering with a written rationale. No interrupt has an undocumented or inconsistent priority.
 > *Apparatus:* Dev PC, code review, D048 decision text.
-> *Execution log:* Not yet run. BLOCKED — requires D048 (see pre-implementation blockers).
+> *Execution log:* Not yet run. **Unblocked 2026-06-17** — D048 logged (`platform.h` scrutiny session).
 
 ---
 
@@ -144,16 +144,16 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-PLT-HW-003 — Watchdog fires on missed kick**
 > *Purpose:* IWDG resets the MCU when `platform_watchdog_kick()` is not called within the timeout.
 > *Linked requirement(s):* `platform.h` watchdog discipline.
-> *Procedure:* Modify firmware to skip the kick at tick [11]. Power on and observe.
-> *Acceptance criteria:* MCU resets within the configured timeout (2–4 s). IWDG reset flag set in RCC_CSR on next boot, readable over wired UART.
+> *Procedure:* Modify firmware to skip the kick at tick [13]. Power on and observe.
+> *Acceptance criteria:* MCU resets within the configured timeout (2.00–5.53 s band — fast/slow LSI corners, D053 A2). IWDG reset flag set in RCC_CSR on next boot, classified `RESET_WATCHDOG` by `platform_reset_cause()`, readable over wired UART.
 > *Apparatus:* STM32F407ZGT6, modified firmware, wired UART.
 > *Execution log:* Not yet run.
 
 > **TEST-PLT-HW-004 — Watchdog fires on hung peripheral init**
 > *Purpose:* A hung `_init()` call cannot hold the MCU indefinitely.
 > *Linked requirement(s):* `platform.h` watchdog discipline.
-> *Procedure:* Insert an infinite loop in `bmi160_init()` before the watchdog kick. Power on.
-> *Acceptance criteria:* MCU resets within the configured timeout.
+> *Procedure:* Insert an infinite loop anywhere inside `bmi160_init()`. Power on. (Per D053 A3 there are no per-`_init()` kicks — the single init window must catch a hang anywhere in the sequence.)
+> *Acceptance criteria:* MCU resets within the configured timeout (2.00–5.53 s band).
 > *Apparatus:* STM32F407ZGT6, modified firmware.
 > *Execution log:* Not yet run.
 
@@ -161,7 +161,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Purpose:* All 12 `_init()` calls complete before the watchdog would trip on a clean boot.
 > *Linked requirement(s):* D043.
 > *Procedure:* Timestamp `platform_init()` entry and `mode_fsm_init()` return using TIM2; print elapsed time over wired UART.
-> *Acceptance criteria:* Elapsed time < 50% of the configured watchdog timeout.
+> *Acceptance criteria:* Elapsed time < 50% of the fast-corner (worst-case shortest) timeout = **< 1.0 s** (D053 A2). If exceeded, increase RLR.
 > *Apparatus:* STM32F407ZGT6, wired UART, terminal.
 > *Execution log:* Not yet run.
 
@@ -179,7 +179,7 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Procedure:* Instrument the firmware to deliberately align a TIM2 update with a DMA TC event so the two ISRs contend, per the D048 priority scheme. Run ≥ 10,000 simultaneous-firing events; on every main-loop read, check every `isr_flags.h` variable and every double-buffer pointer.
 > *Acceptance criteria:* Every `isr_flags.h` variable holds a valid value (0 or 1, no torn intermediate); every double-buffer pointer points to a fully-written page. Zero inconsistencies across all 10,000 events — a single inconsistency is a fail.
 > *Apparatus:* STM32F407ZGT6, logic analyser, instrumented firmware, automated consistency checker.
-> *Execution log:* Not yet run. BLOCKED — requires D048.
+> *Execution log:* Not yet run. **Unblocked 2026-06-17** — D048 logged. (Frames the expected pass as confirming run-to-completion + single-writer ownership + the BASEPRI guard, not "priority = atomicity".)
 
 ---
 
@@ -1227,24 +1227,24 @@ These verify platform-layer discipline by code review and static analysis. They 
 > **TEST-WDG-001 — Watchdog fires: missed kick in main loop**
 > *Purpose:* TEST-PLT-HW-003 confirmed in the full-firmware context.
 > *Linked requirement(s):* `platform.h` watchdog discipline.
-> *Procedure:* Remove the kick from tick [11] in the full firmware build.
-> *Acceptance criteria:* MCU resets within the configured timeout.
+> *Procedure:* Remove the kick from tick [13] in the full firmware build.
+> *Acceptance criteria:* MCU resets within the configured timeout (2.00–5.53 s band).
 > *Apparatus:* STM32F407ZGT6, modified firmware.
 > *Execution log:* Not yet run.
 
 > **TEST-WDG-002 — Watchdog fires: hung init**
 > *Purpose:* TEST-PLT-HW-004 confirmed in the full-firmware build.
 > *Linked requirement(s):* `platform.h` watchdog discipline.
-> *Procedure:* Insert an infinite loop in a `_init()` before its watchdog kick.
-> *Acceptance criteria:* MCU resets within the configured timeout.
+> *Procedure:* Insert an infinite loop anywhere inside a `_init()` (there is no per-`_init()` kick — D053 A3).
+> *Acceptance criteria:* MCU resets within the configured timeout (2.00–5.53 s band).
 > *Apparatus:* STM32F407ZGT6, modified firmware.
 > *Execution log:* Not yet run.
 
 > **TEST-WDG-003 — Safe state on watchdog reset**
-> *Purpose:* After a watchdog reset, the actuators are driven safe before anything else.
-> *Linked requirement(s):* `actuators.h` contract.
-> *Procedure:* Trigger a watchdog reset; scope all servo channels through the reboot.
-> *Acceptance criteria:* The first action on reboot (within `actuators_init()`) is `actuators_safe()` — all fins at zero-deflection pulse width with no commanding interval between power-on and the safe state.
+> *Purpose:* After a watchdog (fault) reset, the fins reach the safe (zero-deflection) state before the first control-law output, and the reset cause is surfaced to the operator. The brief high-Z fin window during the reset itself is explicitly accepted (D053 A6).
+> *Linked requirement(s):* `actuators.h` contract; D053 A4/A6.
+> *Procedure:* Trigger a watchdog reset; scope all servo channels through the reboot; capture the GCS.
+> *Acceptance criteria:* Fins reach zero-deflection safe before the control loop's first actuation output (tick [9]); `platform_reset_cause()` returns `RESET_WATCHDOG`, surfaced to the GCS ("reset occurred → fins to safe state") and logged. The high-Z interval during the reset transient is accepted, not a failure (D053 A6).
 > *Apparatus:* STM32F407ZGT6, oscilloscope.
 > *Execution log:* Not yet run.
 
@@ -1870,6 +1870,6 @@ These go beyond the singular fault injection of G3. Each injects two or more ind
 These external dependencies must be completed before the tests they block can run. Ordering matters — each is listed with the earliest gate it blocks:
 
 - **LR-3 (FDIR innovation gating)** — produces the `CHI2_THRESHOLD_2DOF` derivation formula and detection-latency bound. Blocks TEST-CAL-001, TEST-FDR-007/010/015. Must complete before G1.
-- **D048 (NVIC interrupt priority scheme)** — `platform.h` scrutiny-session deliverable. Blocks TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2).
+- ~~**D048 (NVIC interrupt priority scheme)** — `platform.h` scrutiny-session deliverable. Blocks TEST-PLT-005 (G1) and TEST-PLT-HW-007 (G2).~~ **RESOLVED 2026-06-17** — D048 logged; TEST-PLT-005 and TEST-PLT-HW-007 unblocked.
 - **`CMD_FAULT_ACTUATOR` family in `command_id_t`** — blocks TEST-C2-008 / PFLT-005 / INT-010 / FPP-002 / CFI-002 / CFI-005. Must land before G2 closes.
 - **`overrun_count` field in `telemetry_frame_t`** — blocks TEST-TEL-008 and the frame-verified TEST-INT-004 warning path. Bundle with the D047 implementation work.

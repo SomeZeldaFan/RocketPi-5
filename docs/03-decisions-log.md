@@ -414,7 +414,7 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 **Alternatives considered:**
 - FSM also gates FLIGHT/DEMO entry on actuator health — rejected; redundant with the control law's `SAFE_HOLD`, and expands the FSM transition matrix for no behavioural gain.
 
-**Note on numbering:** D048 (NVIC interrupt priority scheme) is intentionally reserved — it will be logged during the dedicated `platform.h` per-module scrutiny session, where the relative priorities of the TIM2 tick ISR and the DMA transfer-complete ISRs are decided. The D047→D049 gap here is deliberate.
+**Note on numbering:** D048 (NVIC interrupt priority scheme) was reserved here and **logged 2026-06-17** during the `platform.h` per-module scrutiny session (see that date's section). Its out-of-order number, logged at its real date, follows the same reserved-slot mechanism as D050. The D047→D049 gap is deliberate.
 
 ---
 
@@ -470,3 +470,68 @@ Standard hobby servos have no feedback wire to the MCU. The servo control loop i
 - Three-step resolution without a separate admit pass — rejected for the same gyro-poisoning gap; this is the version the scaffold first anticipated and is superseded here.
 - Innovation-gate the barometer too (predicted altitude in `predicted_readings_t`) — deferred; baro stays correction-only this cycle and keeps its admit-pass staleness/bounds checks. Can be added later without changing the structure.
 **Note:** This work surfaced that the selected IMUs (BMI160, ICM-42688-P) are 6-axis (no magnetometer), so yaw is unobservable and drifts on the gyro alone. Logged as R-YAW-01 in the risk register and as a deferred item in `02-current-state.md`; out of scope for this decision.
+
+---
+
+## 2026-06-17
+
+*Logged during the `platform.h` per-module scrutiny session — the first header scrutiny session (per `02-current-state.md` "Next concrete tasks" #1). This session resolved two reserved sign-offs — the NVIC priority scheme (D048, held open since the D047→D049 gap) and the watchdog architecture (D053) — and locked the `platform.h` contract. Decisions were resolved interactively one at a time; the sub-point labels (A1–A7, B1–B6) are retained for traceability to the test plan. D048 keeps its reserved out-of-order number and is logged here at its real date, the same mechanism used for D050 (see the note under D052).*
+
+### D048 — NVIC interrupt priority scheme
+
+**Decision:** The Cortex-M4 NVIC is configured with priority grouping **`NVIC_PRIORITYGROUP_4`** (4 preemption-priority bits, 0 sub-priority bits — STM32F407 implements 4 priority bits = 16 levels), set explicitly in `platform_init()`. Interrupt assignments:
+
+| ISR | Preemption priority |
+|---|---|
+| TIM2 update (loop tick) | 0 (highest) |
+| SPI1 DMA-TC (IMU-1) | 1 |
+| SPI2 DMA-TC (IMU-2) | 1 |
+| I2C DMA-TC (barometer) | 1 |
+| UART1 DMA-RX (radio) | 1 |
+| SysTick (HAL) | 15 (lowest) |
+
+The one main-loop read-modify-write that priority does **not** make safe — clearing an ISR-set `data_ready` flag while snapshotting its double-buffer page index — is protected by a `BASEPRI`-guarded critical section: `__set_BASEPRI(1u << (8u − __NVIC_PRIO_BITS))` (= `0x10`; masks priority ≥ 1, i.e. the DMA-TC level, while TIM2@0 keeps firing), snapshot the page index, clear the flag, `__set_BASEPRI(0u)`, then consume the buffer outside the critical section. A `_Static_assert(__NVIC_PRIO_BITS == 4)` pins the shift. The IMU double-buffer page index is therefore a genuine ISR↔main-loop boundary crossing and is declared in `isr_flags.h` (closing a gap where the manifest previously omitted it).
+
+**Rationale:** Interrupt priority does **not** provide boundary-variable consistency — that comes from two structural properties: every flag and page-index is a single word-aligned access (no torn read/write), and every ISR is the sole writer of its own distinct variable (no two ISRs share a variable, so preemption cannot interleave two writers). Given those, priority allocates only **latency and jitter**, not atomicity. TIM2 is highest because it is the authoritative time source (D034): a delayed tick jitters the control-loop phase and corrupts the timestamp/`dt` that every sample and the estimator depend on. The four DMA-TC ISRs sit one level below and share a single level — each does <10 lines of flag-set/page-swap bookkeeping, the sample is already DMA-buffered, and the main loop consumes it only at tick boundaries, so sub-µs preemption is invisible. SysTick is forced lowest: HAL defaults it to 0 (highest), which would let it preempt TIM2 and the DMA-TCs, but it is HAL-only (init-time timeouts) and must never perturb the loop. The single RMW exception is real over time — the clear-flag race window, though tiny, lands across the ~86 M iterations of a 24 h soak — so the `BASEPRI` section closes it while keeping TIM2 alive (unlike `__disable_irq()`, which drops ticks).
+
+**Alternatives considered:**
+- DMA-TC ISRs highest (preempt TIM2) — rejected; minimizes sensor-flag latency at the cost of loop-tick jitter, but D034 makes tick timing the thing most worth protecting and the flag latency is harmless (data already buffered).
+- Ranking the four DMA-TC ISRs — rejected; no flag-set ISR benefits from preempting another, and ranking adds nested-ISR latency and per-ordering justification.
+- Sub-priority bits (e.g. `PRIORITYGROUP_2`) — rejected; sub-priority only tie-breaks simultaneously-pending same-preemption ISRs and never changes preemption — useless for a flag-set design.
+- `__disable_irq()` around the flag-clear instead of `BASEPRI` — rejected; masks everything including TIM2, dropping ticks.
+- Treating priority as the atomicity guarantee — rejected as incorrect; it would commit a false rationale to a permanent record. Atomicity is structural; priority is latency/jitter only.
+
+**Documentation:** the scheme is reproduced verbatim in the `platform.c`/`platform.h` NVIC comment block and `docs/05-architecture.md §4`, with a prominent implementation-time caution that the `BASEPRI` shift, mask semantics, and "TIM2 stays live" property must be verified with extreme care and proven under TEST-PLT-HW-007 contention before the mechanism is trusted. **TEST-PLT-005 (static, G1) and TEST-PLT-HW-007 (dynamic, G2) are unblocked by this decision.**
+
+### D053 — Watchdog architecture, boot/reset model, and the assert-path safe-state
+
+**Decision:** Seven coupled sign-offs, resolved together (sub-points A1–A7):
+
+- **A1 — Watchdog type.** IWDG is the sole watchdog; WWDG is not used.
+- **A2 — Timeout.** IWDG prescaler `/32`, reload `RLR = 2937`. Because the STM32F407 LSI is specified 17 kHz (min) / 32 kHz (typ) / 47 kHz (max), a fixed reload yields a *band*, not a point: **2.00 s at the fast corner (47 kHz) / 2.94 s typ / 5.53 s at the slow corner (17 kHz)**. The fast (shortest) corner is anchored at 2.00 s because that edge governs false-trips. The clean-boot init sequence is budgeted to **1.0 s = 50 % of the fast-corner timeout** (verified by TEST-PLT-HW-005).
+- **A3 — Kick placement.** No kicks during init. IWDG starts as the first action in `platform_init()` (covering a hung clock-tree bring-up); the entire ~12-module init runs inside one window; the first kick is a single **boot-complete kick** at the init→loop boundary in `main.c` — a known-good "all inits returned, entering loop" assertion that also resets the window — after which the main loop kicks every iteration at tick [13].
+- **A4 — Reset-cause readout.** `platform_init()` reads RCC_CSR early and classifies via an ordered if-hierarchy — SOFTWARE → WATCHDOG (IWDG) → POWER_ON (POR) → BROWNOUT (BOR) → PIN (only reached if no specific flag matched) → UNKNOWN — then clears via RMVF. Exposed through a new `reset_cause_t` enum and `platform_reset_cause()` getter (growing the platform contract from three to four functions).
+- **A5 — Persistence.** The cause needs no backup domain (held in RAM; hardware flags sticky until RMVF). The optional hardfault register-snapshot-to-backup-SRAM is deferred.
+- **A6 — Safe-state on reset.** The high-Z fin window during the reset itself is explicitly accepted with no board-level mitigation. Safe-on-reset is the post-reboot software path: a fault cause drives an initial SAFE_HOLD + `actuators_safe()`, surfaced to the operator on the GCS and logged. (The SAFE_HOLD boot-rule, GCS message, and expedited frame are confirmed-intent, implemented during FSM/telemetry/GCS scrutiny.)
+- **A7 — Assert-path safe-state.** `platform_safe_state()` stays removed from the hardware layer. The assert/halt-to-safe path is a central handler `void system_safe_halt(void)`, declared in a new foundation header `inc/fault.h` (includes nothing upward, so any layer may call it; resolved at link time) and defined in the orchestration layer (`orchestration/fault.c`), where it may include `output/actuators.h`, call `actuators_safe()`, disable interrupts, and spin. It does not reset; the independent IWDG then fires and surfaces the fault as a WATCHDOG reset (A4), so assertion failures and hardfaults funnel through the same path. The project `ASSERT` macro is concretely defined in `fault.h` this session (the cross-module density audit is deferred). Init functions are `void` and fail-fast (failure fires `ASSERT` → `system_safe_halt`); reaching the boot-complete kick therefore inherently proves all inits succeeded.
+
+**Rationale:**
+- A1: the threat is a hang (stuck bus, unresponsive sensor, hung clock-tree config). IWDG runs off the independent LSI and survives a hung clock tree; WWDG runs off PCLK1 and dies with the clock, missing the primary threat, and its max timeout (~tens of ms) cannot cover the init window. WWDG's windowed early-kick guards a runaway-fast loop we do not have (TIM2-paced; sustained overrun handled by D047).
+- A2: a bench demo with an operator present has a loose hang-latency ceiling — a 5.53 s worst-case hang→reset is fine. What matters is a guaranteed floor (no boot loop) and a reasonable ceiling, not timeout accuracy, so an honest worst-case band on a fixed reload beats runtime LSI calibration (which would add a bounded calibration loop to `platform_init` for accuracy we do not need).
+- A3: a kick at the init→loop boundary carries information (reaching it proves every `_init()` returned without hanging) and gives the first loop iteration a fresh window. Per-module kicks mask a hang occurring *after* a module's kick. The HSE-ready/PLL-lock spin-waits in `platform_init` are the real init-hang source and are bounded (JPL Rule 2), not `while(!RDY){}`.
+- A4: knowing *why* the board rebooted — especially "was that a watchdog reset?" — is core to the fault-tolerance depth axis and required by TEST-WDG-003 / TEST-RBT-002. PINRSTF is set on nearly every reset (NRST is bidirectional, so internal resets pulse it), so it is trusted only when it is the sole flag — a property that falls out of checking specific causes first and returning on first match.
+- A5: A4 already delivers the essential "something faulted" signal (hardfault → spin → IWDG → WATCHDOG); the snapshot only adds which instruction faulted — valuable but not load-bearing, and not a contract item.
+- A6: STM32F4 GPIOs go high-Z at reset, so software cannot hold fins during a reset regardless; for a bench demo with no propulsion the brief uncommanded window is harmless, and a board-level backstop is unwarranted (servos are not yet selected). What matters is the post-reboot end state and operator visibility.
+- A7: assertions fire from every layer, so the safe-halt handler is a cross-cutting concern belonging in orchestration (which legitimately sees both hardware and output layers). Declaring it in a foundation header and defining it at the top breaks the include-dependency without a function pointer (rejecting the callback on JPL Rule 9) and keeps a single source of truth for the safe deflection (rejecting a duplicated hardware-layer register write). Spinning rather than resetting funnels asserts and hardfaults through the same WATCHDOG path and keeps a SOFTWARE reset classified as a deliberate (clean) event.
+
+**Alternatives considered:**
+- WWDG instead of / in addition to IWDG (A1) — rejected; PCLK1-clocked, dies with the clock, cannot cover the init window.
+- Runtime LSI calibration via the TIM5 capture route (A2) — rejected; adds init complexity for timeout accuracy a bench demo does not need.
+- Per-module watchdog kicks (A3) — rejected; mask a hang occurring after a module's kick.
+- Backup-SRAM hardfault post-mortem snapshot (A5) — deferred, not rejected; a debugging enhancement with no contract impact.
+- Board-level fin-safe backstop during the reset window (A6) — rejected; the high-Z window is accepted and servos are unselected.
+- `platform_safe_state()` as a hardware-layer register write (A7) — rejected; duplicates the safe-deflection definition across layers, risking divergence from `actuators.c`.
+- A function-pointer callback for the safe-state handler (A7) — rejected; JPL Rule 9.
+- `NVIC_SystemReset()` in `system_safe_halt` instead of spinning (A7) — rejected; would reclassify a SOFTWARE reset as a fault and split the assert/hardfault funnel.
+
+**Cross-references:** the `platform.h` contract is locked to these decisions — watchdog-discipline block, `platform_reset_cause`, the `void` fail-fast init convention, the JPL Rule 5 assertion-density exemptions for the hot-path `platform_timer_us` and the single-register-write `platform_watchdog_kick`, the u32 wrap-safe timestamp idiom (`(now − then)`; rollover at 2³² µs ≈ 71.58 min is a known event, not a fault), and the TIM2 prescaler derivation (TIM2 on APB1 at 84 MHz, prescaler 83 → 1 MHz → count == µs; `datasheets/STM32F4xx.pdf` p.122). TEST-PLT-002, TEST-PLT-HW-003/004/005 and TEST-WDG-002/003 are updated to match (no per-init kicks; timeout band; reset-cause surfacing).

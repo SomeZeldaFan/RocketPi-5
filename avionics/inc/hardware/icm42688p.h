@@ -19,8 +19,8 @@
 
 /*
  * Configure SPI2 + DMA, initialise ICM-42688-P registers (ODR, FS range,
- * AAF/UI filter), arm the data-ready interrupt, kick the platform watchdog.
- * Must be called after platform_init().
+ * AAF/UI filter), arm the data-ready interrupt. Must be called after
+ * platform_init(). Does NOT kick the watchdog — no per-_init() kicks (D053 A3).
  */
 void icm42688p_init(void);
 

@@ -115,6 +115,27 @@ typedef enum {
 } command_id_t;
 
 /* =========================================================================
+ * STATUS ENUMS — PLATFORM
+ * =========================================================================
+ * Reset cause classified by platform_init() from RCC_CSR at boot, then the
+ * flags are cleared (RMVF) so the next boot reads clean. Read via
+ * platform_reset_cause(). Classification is an ordered hierarchy — the first
+ * matching specific flag wins — so RESET_PIN is reported only when the NRST
+ * pin flag is the sole flag set (PINRSTF is set on nearly every reset because
+ * NRST is bidirectional; it is informative only in isolation). WATCHDOG and
+ * BROWNOUT are the fault causes that drive the post-reboot safe-state path
+ * (D053 A4/A6). WWDG is not used (D053 A1) so no WWDG cause exists. RESET_LOW_POWER
+ * is omitted — no low-power modes are used. RESET_UNKNOWN is the safe default. */
+typedef enum {
+    RESET_POWER_ON,   /* PORRSTF — cold power-on (clean) */
+    RESET_WATCHDOG,   /* IWDGRSTF — independent watchdog fired (fault) */
+    RESET_SOFTWARE,   /* SFTRSTF — deliberate software reset (clean) */
+    RESET_BROWNOUT,   /* BORRSTF — supply dipped mid-run (fault) */
+    RESET_PIN,        /* PINRSTF alone — external NRST (debugger/button) */
+    RESET_UNKNOWN     /* no flag matched — safe default */
+} reset_cause_t;
+
+/* =========================================================================
  * DATA STRUCTS — SENSOR READINGS
  * =========================================================================
  * Every reading struct carries a timestamp (from TIM2, per D034) and a status.

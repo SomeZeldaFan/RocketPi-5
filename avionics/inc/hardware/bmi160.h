@@ -20,8 +20,8 @@
 
 /*
  * Configure SPI1 + DMA, initialise BMI160 registers (ODR, range, filtering),
- * arm the data-ready interrupt, kick the platform watchdog on completion.
- * Must be called after platform_init().
+ * arm the data-ready interrupt. Must be called after platform_init(). Does
+ * NOT kick the watchdog — there are no per-_init() kicks (D053 A3).
  */
 void bmi160_init(void);
 

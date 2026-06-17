@@ -26,7 +26,7 @@ void bmi160_init(void)
 {
     /*
      * Real implementation: configure SPI1+DMA, init BMI160 registers,
-     * arm interrupts, then platform_watchdog_kick() before returning.
+     * arm interrupts. Does NOT kick the watchdog (no per-_init() kicks, D053 A3).
      */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.

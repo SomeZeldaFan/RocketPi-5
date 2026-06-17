@@ -26,7 +26,7 @@ void ms5611_init(void)
 {
     /*
      * Real implementation: configure I2C+DMA, reset the MS5611, read PROM
-     * calibration words, store them statically, kick the watchdog.
+     * calibration words, store them statically. No watchdog kick (D053 A3).
      */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.

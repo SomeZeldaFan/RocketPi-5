@@ -23,7 +23,8 @@
 
 /*
  * Configure I2C, reset and load PROM calibration coefficients from the
- * MS5611, kick the platform watchdog. Must be called after platform_init().
+ * MS5611. Must be called after platform_init(). Does NOT kick the watchdog
+ * — no per-_init() kicks (D053 A3).
  */
 void ms5611_init(void);
 

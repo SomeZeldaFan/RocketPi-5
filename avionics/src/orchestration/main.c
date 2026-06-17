@@ -24,11 +24,14 @@
  *
  * The structure is intentional and the order is the architecture:
  *   - platform_init() FIRST so IWDG is running before any peripheral init.
- *     A hung peripheral init will then time out the watchdog and reset the
- *     MCU rather than hanging forever.
- *   - Hardware drivers next, in stable order. Each _init() pets the watchdog
- *     on completion (kick is inside the driver's _init, not here).
+ *     A hang ANYWHERE in init then trips the single watchdog window and resets
+ *     the MCU rather than hanging forever (D053 A3).
+ *   - Hardware drivers next, in stable order. NO _init() kicks the watchdog — the
+ *     whole init sequence runs inside one window (budgeted < 1.0 s), so a hang
+ *     after any module's kick cannot be masked (D053 A3).
  *   - Algorithm modules next, then output, then orchestration.
+ *   - One boot-complete watchdog kick fires after all _init() return, before the
+ *     loop — a known-good "init succeeded" assertion that also resets the window.
  *   - Loop body executes the 14 tick steps in the architectural order (D050).
  *     The order is load-bearing: FDIR admission runs before predict so a bad
  *     gyro cannot poison the prediction; the gate runs after predict so it has
@@ -62,6 +65,14 @@ int main(void)
     static attitude_estimate_t estimate;
     static actuator_cmd_t      cmd;
     static command_frame_t     c2_cmd;
+
+    /* Boot complete: all _init() returned without hanging and all per-tick state
+     * is established (statics are zero-initialised at load). Kick the watchdog once
+     * here — a known-good "init succeeded, entering loop" assertion that also resets
+     * the IWDG window so the first loop iteration gets a full window (D053 A3). A
+     * fault reset cause (platform_reset_cause()) drives an initial SAFE_HOLD here in
+     * a later session — FSM/telemetry scrutiny (D053 A6). */
+    platform_watchdog_kick();
 
     /* ------------------------- Main loop ------------------------- */
     for (;;) {

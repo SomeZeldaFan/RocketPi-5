@@ -209,7 +209,7 @@ Layers (bottom to top):
 
 ### 4.2 Scheduling model
 
-Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the control loop rate (rate TBD pending LR-1; nominal 500–1000 Hz). The main loop waits on the tick flag, then executes the full pipeline in deterministic sequence every tick.
+Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the control loop rate (`AVIONICS_LOOP_RATE_HZ` = 1000 Hz, D052). The main loop waits on the tick flag, then executes the full pipeline in deterministic sequence every tick.
 
 **Main loop tick sequence:**
 
@@ -244,7 +244,13 @@ Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the contro
 
 **Overrun detection:** TIM2 is sampled at loop entry. If elapsed since the previous tick exceeds the loop period, an assert fires and the system halts. Overrun is never silent.
 
-**Watchdog during init:** IWDG is started inside `platform_init()` before any peripheral init begins, with a timeout of ~2–4 s covering the full init sequence. Each module's `_init()` calls `platform_watchdog_kick()` on completion — a hung peripheral init resets the MCU rather than hanging forever. In steady-state the main loop kicks the watchdog every ~1 ms, well within the timeout.
+**Watchdog architecture (D053).** IWDG only — WWDG is not used; IWDG is LSI-clocked and survives a hung clock-tree bring-up, the primary threat (A1). Prescaler /32, reload RLR = 2937: because the F407 LSI is specified 17/32/47 kHz, the timeout is a **band** — 2.00 s (fast 47 kHz) / 2.94 s (typ) / 5.53 s (slow 17 kHz) — with the fast (shortest) corner anchored at 2.00 s because that edge governs false-trips (A2). IWDG is started as the **first** action in `platform_init()`, before clock/peripheral config, so a hang anywhere in init trips the window. **No `_init()` kicks the watchdog** — a per-init kick would mask a hang that strikes *after* a module's kick; instead the whole init sequence runs inside one window, budgeted to < 1.0 s (50 % of the fast corner, TEST-PLT-HW-005). The **first** kick is a single boot-complete kick in `main.c` at the init→loop boundary — a known-good "all inits returned" assertion that also resets the window — after which the main loop kicks every iteration at tick [13] (A3).
+
+**NVIC interrupt priority scheme (D048).** Grouping `NVIC_PRIORITYGROUP_4` (4 preemption bits, 0 sub-priority; F407 implements 4 bits = 16 levels), set explicitly in `platform_init()`. Priorities: **TIM2 update = 0** (highest); **SPI1/SPI2/I2C/UART1 DMA = 1** (one shared level); **SysTick = 15** (lowest, HAL-only). Priority does **not** provide boundary-variable consistency — that is structural (single word-aligned access + single-writer-per-variable; every ISR writes only its own `isr_flags.h` variable). Priority allocates only latency/jitter: TIM2 highest protects the authoritative-clock timing (D034); the DMA-TC flag-set/page-swap bookkeeping tolerates sub-µs delay (sample already buffered, consumed at tick boundaries); SysTick is forced lowest so it never perturbs the loop (HAL defaults it to highest). The one main-loop read-modify-write — clearing a `data_ready` flag while snapshotting its double-buffer page index — is protected by a `BASEPRI` critical section: `__set_BASEPRI(1u << (8u − __NVIC_PRIO_BITS))` (= `0x10`, masks priority ≥ 1 so the DMA-TC level is held while TIM2@0 keeps firing → no lost ticks), snapshot the index, clear the flag, drop `BASEPRI`, then consume the buffer outside. `platform.c` carries `_Static_assert(__NVIC_PRIO_BITS == 4)` so the shift cannot silently break; the page index is listed in `isr_flags.h`.
+
+> ⚠ **BASEPRI implementation caution.** When this mechanism is actually built, the `1u << (8u − __NVIC_PRIO_BITS)` shift, the mask semantics (an interrupt is masked when its priority value ≥ `BASEPRI`), and the "TIM2 stays live" property must be verified with extreme care — a wrong shift masks nothing or masks TIM2 too. It must be proven under TEST-PLT-HW-007 contention (≥10,000 forced TIM2-vs-DMA-TC events, all `isr_flags.h` variables consistent) before it is trusted.
+
+**Reset-cause + fail-fast (D053 A4/A7).** `platform_init()` reads RCC_CSR early, classifies the reset (SOFTWARE → WATCHDOG → POWER_ON → BROWNOUT → PIN-if-alone → UNKNOWN), and clears via RMVF; the cause is read via `platform_reset_cause()`. Every `_init()` is `void` and **fail-fast**: a failure (HAL error, bounded spin-wait timeout) fires `ASSERT()` → `system_safe_halt()` (declared in the foundation header `fault.h`, defined in `orchestration/fault.c`, where it drives `actuators_safe()`, disables interrupts, and spins → IWDG → WATCHDOG reset). Reaching the boot-complete kick therefore proves every init succeeded. This is the link-time inversion-of-control that replaced the removed `platform_safe_state()` (a hardware-layer call into the output layer would violate the layer rule).
 
 ### 4.3 Canonical data types
 
@@ -316,7 +322,7 @@ Ground station dashboard
 
 ### 4.5 Module interface contracts
 
-**platform:** `platform_init()` — starts IWDG first, then configures clocks and peripherals. `platform_timer_us()` — reads TIM2, the authoritative time source (D034). `platform_watchdog_kick()` — callable from module init functions and main loop tick [13].
+**platform:** `platform_init()` — starts IWDG first (D053 A1–A3), reads/classifies/clears the RCC_CSR reset cause (A4), then configures clocks, TIM2, NVIC (D048), and peripherals; `void` + fail-fast (A7). `platform_timer_us()` — reads TIM2, the authoritative 1 MHz time source (D034); used wrap-safe as `(now − then)`, never absolute-ordered (rollover at ≈ 71.58 min is a known event). `platform_watchdog_kick()` — called from exactly two sites: once at the boot-complete boundary in `main.c`, then every main-loop tick [13]. **Never** from a module `_init()` (A3). `platform_reset_cause()` → `reset_cause_t` — the classified cause of the last reset (A4); WATCHDOG/BROWNOUT drive the post-reboot safe-state path (A6, implemented in FSM/telemetry).
 
 **bmi160 / icm42688p:** `_init()`, `_read(imu_reading_t *out) → imu_status_t`. Caller checks status before using data.
 

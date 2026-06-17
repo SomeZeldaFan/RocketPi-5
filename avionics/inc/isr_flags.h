@@ -18,13 +18,26 @@
  * The ring buffer write pointer for UART RX is managed entirely inside
  * sik_radio.c and is not listed here — it is not read directly by the main
  * loop; c2 reads buffered bytes through the sik_radio API.
+ *
+ * Flag-clear discipline (D048): the main loop clears a *_data_ready flag while
+ * snapshotting the matching *_active_page index inside a BASEPRI critical section
+ * (mask priority >= 1 so the DMA-TC level is held while TIM2@0 keeps firing),
+ * then consumes the buffer OUTSIDE the section. This closes the read-modify-write
+ * race on the flag (clear vs a concurrent ISR set) without dropping ticks. See
+ * the NVIC scheme block in platform.h.
  */
 
-/* SPI1 DMA TC ISR (IMU-1) sets; main loop reads at tick [1] */
+/* SPI1 DMA TC ISR (IMU-1) sets; main loop reads (and clears) at tick [1] */
 extern volatile_flag_t imu1_data_ready;
 
-/* SPI2 DMA TC ISR (IMU-2) sets; main loop reads at tick [2] */
+/* SPI1 DMA TC ISR (IMU-1) swaps; main loop reads under BASEPRI at tick [1] (D048) */
+extern volatile_flag_t imu1_active_page;
+
+/* SPI2 DMA TC ISR (IMU-2) sets; main loop reads (and clears) at tick [2] */
 extern volatile_flag_t imu2_data_ready;
+
+/* SPI2 DMA TC ISR (IMU-2) swaps; main loop reads under BASEPRI at tick [2] (D048) */
+extern volatile_flag_t imu2_active_page;
 
 /* I2C DMA TC ISR (barometer) sets; main loop reads at tick [3] */
 extern volatile_flag_t baro_data_ready;
