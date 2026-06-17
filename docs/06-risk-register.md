@@ -63,9 +63,9 @@ Removing TEST-HIL-004/005/006 eliminates the only pre-hardware tests that verifi
 **R-YAW-01 — Yaw unobservable with 6-axis IMUs (no magnetometer)**
 The selected IMUs (BMI160, ICM-42688-P) are 6-axis (accelerometer + gyroscope). Gravity, sensed by the accelerometer, constrains roll and pitch but provides no absolute yaw/heading reference, so yaw is observable only through gyro integration and drifts without bound — the accelerometer correction that bounds roll/pitch cannot bound yaw. Surfaced during the FDIR/estimator boundary work (D050). Note: constraints §5 lists a "magnetometer disturbance" failure mode that the current hardware cannot exhibit — the scope statement and the selected hardware need reconciling.
 *Likelihood:* High (a property of the hardware, not a contingency). *Impact:* Medium (roll/pitch — the primary bench-perturbation axes — remain well-estimated; the yaw estimate degrades over time).
-*Status:* Open — deferred decision.
-*Mitigation:* Decide later between (a) adding a magnetometer to restore an absolute yaw reference — which also reopens the magnetometer-disturbance failure mode, suiting the fault-tolerance depth axis — or (b) scoping yaw to best-effort gyro-only and bounding the accuracy claim to roll/pitch.
-*Last reviewed:* 2026-06-14
+*Status:* Closed (D054, 2026-06-17) — option (a) taken: magnetometer (Bosch BMM150, dedicated I2C bus) added. Absolute yaw reference restored → yaw is now an observable, bounded EKF state; the constraints §5 magnetic-disturbance failure mode is now achievable, suiting the depth axis.
+*Mitigation (realized):* BMM150 on its own I2C bus; `mag_status_t` / `mag_reading_t` / `mag_healthy` added to the canonical types; protocol version bumped to 2. The mag becomes its own innovation-gated channel in FDIR. RISK-001 (mag unusable indoors) remains the operative residual and stays open under its own entry.
+*Last reviewed:* 2026-06-17
 
 ---
 

@@ -34,7 +34,8 @@ typedef volatile uint8_t volatile_flag_t;
  * The ground station checks this on receipt and alerts the operator on a
  * mismatch before bad data propagates. Increment whenever frame layout changes.
  */
-#define AVIONICS_PROTOCOL_VERSION ((uint8_t)1U)
+/* v2 (D054, 2026-06-17): mag_healthy added to health_flags_t — frame layout changed. */
+#define AVIONICS_PROTOCOL_VERSION ((uint8_t)2U)
 
 /* =========================================================================
  * SYSTEM CONSTANTS
@@ -80,6 +81,18 @@ typedef enum {
     BARO_OUT_OF_RANGE,
     BARO_ISOLATED
 } baro_status_t;
+
+/* Magnetometer (BMM150, D054) — dedicated I2C bus. Mirrors imu_status_t.
+ * MAG_ISOLATED means FDIR has flagged the mag; upstream passes NULL to the
+ * estimator rather than this reading, and the yaw channel grows covariance. */
+typedef enum {
+    MAG_OK,
+    MAG_BUS_ERROR,
+    MAG_TIMEOUT,
+    MAG_STALE_DATA,
+    MAG_OUT_OF_RANGE,
+    MAG_ISOLATED
+} mag_status_t;
 
 /* =========================================================================
  * STATUS ENUMS — ALGORITHM MODULES
@@ -165,6 +178,16 @@ typedef struct {
     baro_status_t  status;
 } baro_reading_t;
 
+/*
+ * field_ut:      magnetic field per axis [x,y,z], microtesla, body frame.
+ * Bounds the yaw estimate (BMM150, D054). No driver yet — see hardware layer (task 7).
+ */
+typedef struct {
+    float          field_ut[3];
+    uint32_t       timestamp_us;
+    mag_status_t   status;
+} mag_reading_t;
+
 /* =========================================================================
  * DATA STRUCTS — FDIR
  * =========================================================================
@@ -208,6 +231,7 @@ typedef struct {
     bool imu1_healthy;
     bool imu2_healthy;
     bool baro_healthy;
+    bool mag_healthy;
     bool actuator_healthy[4]; /* per-fin: index matches fin number 0..3 */
     bool radio_healthy;
     bool wired_healthy;
