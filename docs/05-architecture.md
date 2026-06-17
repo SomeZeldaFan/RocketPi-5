@@ -147,23 +147,25 @@ The airframe is a custom-designed, 3D-printed semi-monocoque structure, treated 
 
 ### 3.1 Design philosophy
 
-Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by printed-in internal frames and longitudinal stringers integrated into the same print model. Load envelope is bench-only — self-weight, perturbation forces during demos (tens of newtons peak), servo reaction forces on fin pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements.
+Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by internal flanges at the section joints and by **inserted CNC-aluminium stringers** (per D044) that bridge each joint locally — not printed-in full-length spars (D055). Load envelope is bench-only — self-weight, perturbation forces during demos (tens of newtons peak), servo reaction forces on the canard pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements.
+
+**The comprehensive, authoritative airframe description lives in `docs/cad/airframe-architecture.md`** (geometry, joint standard, datums, avionics capsule, control surfaces, power/cabling, fabrication, open items). The subsections below summarise and point there.
 
 ### 3.2 Skin / frame / stringer layout
 
-*To be populated during airframe CAD work.*
+Locked (D055). Cylindrical sections: OD 174, bore 150, 12 mm wall, with a 15 mm internal flange (Ø120 opening). The wall embeds four Ø5 stringer bores at R81 (12/3/6/9 o'clock); the flange carries the 8-bolt clamp ring at R67.5. The skin carries mid-span bending; aluminium stringers carry local bending across the joints only. Full geometry: `docs/cad/airframe-architecture.md` §3–§5.
 
 ### 3.3 Segmentation strategy
 
-*To be populated during airframe CAD work. The airframe will be printed in multiple segments, joined mechanically; segmentation choice trades off print volume against joint count and joint structural integrity.*
+Locked (D055). The airframe is a stack of identical ~280 mm sections (capped by the ~300 mm print volume), joined by an internal twin-flange bolted joint with a clean fastener-free outer skin. The joint splits three jobs onto three features: flange faces = axial datum, four aluminium stringers = radial/clocking alignment datum, eight M3 bolts = clamp. Heat-set inserts use a stepped pilot whose diameter step is the insert's depth datum. Detail and the per-insert formulas: `docs/cad/airframe-architecture.md` §5 and `docs/cad/aft-most-section.md`.
 
 ### 3.4 Avionics bay integration
 
-*To be populated during airframe CAD work. Avionics bay is purpose-designed for the avionics stack — MCU mount, sensor positioning, radio antenna placement, cable routing, access for in-place flashing and debugging via the wired link.*
+Locked in concept (D057). The avionics is a self-contained detachable **capsule** (MCU, both IMUs, magnetometer, barometer, radio, batteries, power) that drops into the forward section and is serviced via panels; servo power/PWM connect after insertion. Capsule fastening, service-panel retention, and cable mating are open (`docs/cad/airframe-architecture.md` §6, §12).
 
-### 3.5 Fin pivot integration
+### 3.5 Control-surface (canard / fin) integration
 
-*To be populated during airframe CAD work. Four fin pivots integrated into the airframe structure; servo mounting brackets printed into the body adjacent to the fin hinge points; servo linkages designed in.*
+Locked in concept (D056). Four **static** aft fins (90° "+", non-actuated) plus four **actuated canards** forward (90°, each on its own servo/PWM) that are the sole control authority. Canard body station, pivot/hinge, and servo bracket/linkage are open. Servos on the dedicated 5 V Rail B (D033). Detail: `docs/cad/airframe-architecture.md` §7, §8, §12.
 
 ### 3.6 Material selection and print strategy
 

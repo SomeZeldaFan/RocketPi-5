@@ -67,6 +67,43 @@ The selected IMUs (BMI160, ICM-42688-P) are 6-axis (accelerometer + gyroscope). 
 *Mitigation (realized):* BMM150 on its own I2C bus; `mag_status_t` / `mag_reading_t` / `mag_healthy` added to the canonical types; protocol version bumped to 2. The mag becomes its own innovation-gated channel in FDIR. RISK-001 (mag unusable indoors) remains the operative residual and stays open under its own entry.
 *Last reviewed:* 2026-06-17
 
+## Airframe joint / assembly risks (added 2026-06-17 per D055 / D056)
+
+**R-AF-01 — Stringer-bore coaxiality across the joint**
+The four Ø5 stringer bores in mating sections are printed in two separate parts; if they are not coaxial within print + slip-fit tolerance, four rigid 200 mm aluminium stringers cannot be inserted across the joint, or will force misalignment. The stringers are the joint's radial/clocking datum, so this is on the assembly critical path.
+*Likelihood:* Medium. *Impact:* Medium (sections won't assemble cleanly).
+*Status:* Open — Mitigating.
+*Mitigation:* Slip-fit bores reamed/drilled to final size post-print; lead-in chamfers at bore mouths; assemble stringers first (they self-align), bolts second. Validate on the single-joint test coupon before committing a full section.
+*Last reviewed:* 2026-06-17
+
+**R-AF-02 — Heat-set insert depth inconsistency**
+Heat-set inserts can sink to inconsistent depths in a plain pilot hole, giving uneven clamp behaviour across 8 bolts × ~6 joints.
+*Likelihood:* Low (mitigated by design). *Impact:* Low–Medium.
+*Status:* Mitigating.
+*Mitigation:* Stepped pilot (D055 / airframe doc §5.2) — the diameter-step shoulder is a hard bottom datum so every insert seats at the same depth. Confirm on the test coupon.
+*Last reviewed:* 2026-06-17
+
+**R-AF-03 — Mass, print time, and filament cost of 12 mm-wall sections**
+A 280 mm, 12 mm-wall section is a large print (~1.7 L wall volume); ~6 sections imply roughly a spool and many print-hours each, plus failed-print risk. Within the $2k budget but a real slog and cost item (Constraints §10.1).
+*Likelihood:* High (a property of the design). *Impact:* Medium (schedule + filament budget).
+*Status:* Open — accepted.
+*Mitigation:* Budget the print time and filament explicitly; coupon-first to avoid scrapping full sections; "an airframe by tomorrow" is realistically one section + a frozen joint standard.
+*Last reviewed:* 2026-06-17
+
+**R-AF-04 — Canard control coupling / stability**
+Forward canards (D056) contribute pitch/yaw moments ahead of the CG and can couple with body modes; the degraded-mode mixing matrices (REQ-CTL-005) must remain stable on canards. On the static bench the dynamic risk is limited, but the control-law tuning assumptions move from aft fins to canards.
+*Likelihood:* Low–Medium. *Impact:* Medium.
+*Status:* Open.
+*Mitigation:* Validate closed-loop stability (nominal and 3-of-4) empirically during bench integration; pulls on the same shakedown budget as R-HIL-01.
+*Last reviewed:* 2026-06-17
+
+**R-AF-05 — Joint assembly slog**
+~6 joints × (8 inserts + 8 bolts + 4 stringers) ≈ 48 inserts, 48 bolts, 24 stringers to install, each heat-set a chance to go crooked. Uncharacterised tedium is a planning failure (Constraints §10.1).
+*Likelihood:* Medium. *Impact:* Low–Medium.
+*Status:* Open — accepted.
+*Mitigation:* Budget the assembly time; consider an insert-installation jig; standardise the joint so the process is repeatable.
+*Last reviewed:* 2026-06-17
+
 ---
 
 *Review the register at the start of each phase and after any significant procurement or integration milestone.*

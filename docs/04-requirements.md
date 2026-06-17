@@ -59,12 +59,12 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 
 ---
 
-> **REQ-SYS-005 — Four independently actuated aerodynamic fins**
-> The system shall actuate four aerodynamic fins independently. Each fin shall be driven by a dedicated PWM channel from the MCU. Fins shall be arranged at 90° spacing in "+" configuration aligned with the principal body axes.
+> **REQ-SYS-005 — Four independently actuated aerodynamic canards**
+> The system shall actuate four aerodynamic canards independently. Each canard shall be driven by a dedicated PWM channel from the MCU. Canards shall be arranged at 90° spacing aligned with the principal body axes. The canards are the system's sole control-authority surfaces; the aft fins are static (REQ-SYS-013).
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* D030. Four independently actuated fins enable actuator fault tolerance: losing one fin leaves three, which is the minimum for three-axis moment control. A mixing-matrix reconfiguration can redistribute authority across the remaining three. This makes actuator fault tolerance demonstrable.
-> *Verification:* Schematic review confirms four distinct PWM channel assignments. Bench test — command each fin independently to distinct deflection angles, confirm via physical observation and servo position feedback that all four move independently.
+> *Rationale:* D030, D056. Four independently actuated canards enable actuator fault tolerance: losing one canard leaves three, the minimum for three-axis moment control, and a mixing-matrix reconfiguration redistributes authority across the remaining three. D056 moves the actuated surfaces from the aft fins to forward canards — separating passive stabilisation from active control — while preserving D030's fault-tolerance rationale.
+> *Verification:* Schematic review confirms four distinct PWM channel assignments. Bench test — command each canard independently to distinct deflection angles, confirm via physical observation and servo position feedback that all four move independently.
 
 ---
 
@@ -109,7 +109,7 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 > *Category:* Functional.
 > *Priority:* Must.
 > *Rationale:* D013, Constraints §5. Graceful degradation under sensor compromise is the project's depth axis. The system must demonstrate that fault tolerance is not a paper property — the bench demo shows continued operation with a sensor disconnected mid-run.
-> *Verification:* Bench test — disconnect IMU-1 during active operation; confirm estimator continues (with degraded uncertainty), sensor health reflects the fault, and the system does not halt. Repeat for barometer and for one fin servo.
+> *Verification:* Bench test — disconnect IMU-1 during active operation; confirm estimator continues (with degraded uncertainty), sensor health reflects the fault, and the system does not halt. Repeat for barometer and for one canard servo.
 
 ---
 
@@ -128,6 +128,15 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 > *Priority:* Must.
 > *Rationale:* D024, D026. SPI's per-device chip-select is the mechanism: with CS deasserted, a misbehaving device is electrically invisible to the bus. This requirement verifies that the layout and firmware implementation preserve this guarantee.
 > *Verification:* Bench test — assert fault conditions on IMU-1's SPI lines while monitoring IMU-2's data output; confirm no data corruption or communication loss on IMU-2 via oscilloscope and log analysis.
+
+---
+
+> **REQ-SYS-013 — Four static aft stabilising fins**
+> The system shall carry four fixed aft fins at 90° "+" spacing aligned with the principal body axes. These fins are static — non-actuated, with no PWM channel — and are distinct from the actuated canards (REQ-SYS-005).
+> *Category:* Functional.
+> *Priority:* Should.
+> *Rationale:* D056. Separating passive stabilisation (aft fins) from active control authority (canards) is a cleaner configuration than all-moving aft fins. On the bench article the aft fins are representative/structural; they carry no control function and are explicitly excluded from the actuator-fault path (FDIR acts on canards only).
+> *Verification:* Inspection — confirm four fixed aft fins present at 90° spacing with no servo/PWM assignment. Code review — confirm no actuator channel or mixing-matrix term references the aft fins.
 
 ---
 
@@ -217,38 +226,38 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-CTL-002 — Mixing-matrix control allocation**
-> The control allocator shall map desired pitch, yaw, and roll moments to individual fin deflection commands via a mixing matrix. The mixing matrix shall be explicit and modifiable at runtime to support fault reconfiguration.
+> The control allocator shall map desired pitch, yaw, and roll moments to individual canard deflection commands via a mixing matrix. The mixing matrix shall be explicit and modifiable at runtime to support fault reconfiguration.
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* Architecture §4, D030. An explicit mixing matrix is required for fault reconfiguration (REQ-CTL-005) — the matrix must be swappable at runtime. Hardcoded fin-to-moment mappings cannot be reconfigured without recompilation.
-> *Verification:* Code review — confirm mixing matrix is a defined data structure, not hardcoded constants. Bench test — confirm four fins receive distinct deflection commands during a multi-axis perturbation response.
+> *Rationale:* Architecture §4, D030, D056. An explicit mixing matrix is required for fault reconfiguration (REQ-CTL-005) — the matrix must be swappable at runtime. Hardcoded canard-to-moment mappings cannot be reconfigured without recompilation.
+> *Verification:* Code review — confirm mixing matrix is a defined data structure, not hardcoded constants. Bench test — confirm four canards receive distinct deflection commands during a multi-axis perturbation response.
 
 ---
 
 > **REQ-CTL-003 — Flight mode deflection limits**
-> In flight mode, fin deflection commands shall be clamped to ±[TBD — pending airframe CAD and dynamics analysis]°. Commands exceeding this limit shall be saturated at the limit value; no out-of-range command shall reach the servo.
+> In flight mode, canard deflection commands shall be clamped to ±[TBD — pending airframe CAD and dynamics analysis]°. Commands exceeding this limit shall be saturated at the limit value; no out-of-range command shall reach the servo.
 > *Category:* Constraint.
 > *Priority:* Must.
-> *Rationale:* D020. Flight mode applies real aerodynamic deflection limits appropriate to a flight vehicle. The specific limit angle is determined by airframe dynamics analysis and servo selection — it is the maximum deflection that does not cause aerodynamic stall or structural overload on the fin.
-> *Verification:* Bench measurement — command flight mode; apply maximum perturbation; measure peak fin deflection via position feedback; confirm it does not exceed the TBD limit.
+> *Rationale:* D020. Flight mode applies real aerodynamic deflection limits appropriate to a flight vehicle. The specific limit angle is determined by airframe dynamics analysis and servo selection — it is the maximum deflection that does not cause aerodynamic stall or structural overload on the canard.
+> *Verification:* Bench measurement — command flight mode; apply maximum perturbation; measure peak canard deflection via position feedback; confirm it does not exceed the TBD limit.
 
 ---
 
 > **REQ-CTL-004 — Demo mode deflection limits**
-> In demo mode, fin deflection limits shall be relaxed to ±[TBD — pending airframe CAD and dynamics analysis]°, exceeding the flight mode limits, to make control surface motion visually legible to an observer.
+> In demo mode, canard deflection limits shall be relaxed to ±[TBD — pending airframe CAD and dynamics analysis]°, exceeding the flight mode limits, to make control surface motion visually legible to an observer.
 > *Category:* Constraint.
 > *Priority:* Must.
-> *Rationale:* D020. On a bench demo, the fin deflections in flight mode may be too small for an observer to see clearly. Demo mode relaxes the limits to make the control system's response visually unambiguous. The specific demo limit is chosen to be within servo travel and structurally safe on the bench article.
-> *Verification:* Bench measurement — command demo mode; apply perturbation; confirm peak fin deflection observably exceeds the flight mode limit and does not exceed servo physical travel.
+> *Rationale:* D020. On a bench demo, the canard deflections in flight mode may be too small for an observer to see clearly. Demo mode relaxes the limits to make the control system's response visually unambiguous. The specific demo limit is chosen to be within servo travel and structurally safe on the bench article.
+> *Verification:* Bench measurement — command demo mode; apply perturbation; confirm peak canard deflection observably exceeds the flight mode limit and does not exceed servo physical travel.
 
 ---
 
-> **REQ-CTL-005 — Mixing-matrix reconfiguration on fin fault**
-> Upon isolation of a faulted fin by the FDIR module, the control allocator shall reconfigure to a mixing matrix that redistributes pitch, yaw, and roll moment commands across the remaining three fins. The reconfigured system shall continue producing bounded actuator commands.
+> **REQ-CTL-005 — Mixing-matrix reconfiguration on canard fault**
+> Upon isolation of a faulted canard by the FDIR module, the control allocator shall reconfigure to a mixing matrix that redistributes pitch, yaw, and roll moment commands across the remaining three canards. The reconfigured system shall continue producing bounded actuator commands.
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* D030. Four fins in "+" configuration with independent actuation enables this reconfiguration. Three fins are the minimum for three-axis moment control. This requirement verifies that the fault-tolerance story is not just hardware — the software handles the reconfiguration correctly.
-> *Verification:* Bench test — disable one servo physically; confirm FDIR isolates the fin, mixing matrix reconfiguration is triggered (per REQ-FDR-009), and the remaining three fins continue producing commanded deflections. Log confirms mode transition and new matrix in use.
+> *Rationale:* D030, D056. Four canards at 90° spacing with independent actuation enables this reconfiguration. Three canards are the minimum for three-axis moment control. This requirement verifies that the fault-tolerance story is not just hardware — the software handles the reconfiguration correctly.
+> *Verification:* Bench test — disable one servo physically; confirm FDIR isolates the canard, mixing matrix reconfiguration is triggered (per REQ-FDR-009), and the remaining three canards continue producing commanded deflections. Log confirms mode transition and new matrix in use.
 
 ---
 
@@ -256,7 +265,7 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 > Following a manual perturbation of the test stand, the system shall return the estimated attitude to within a defined band of the commanded setpoint within [TBD — pending airframe CAD and dynamics analysis] seconds of peak perturbation.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* Pending airframe CAD. The settling time is a function of the airframe's moment of inertia, fin effectiveness, and the control law's bandwidth — none of which can be specified without airframe geometry and dynamics analysis. These inputs come from CAD and structural analysis, which run in parallel with early airframe design.
+> *Rationale:* Pending airframe CAD. The settling time is a function of the airframe's moment of inertia, canard effectiveness, and the control law's bandwidth — none of which can be specified without airframe geometry and dynamics analysis. These inputs come from CAD and structural analysis, which run in parallel with early airframe design.
 > *Verification:* Bench test — apply a repeatable manual perturbation (defined angular impulse); measure time from perturbation peak to restoration within the defined band; average over five trials.
 
 ---
@@ -282,7 +291,7 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ## 4. Fault detection and graceful degradation requirements
 
 > **REQ-FDR-001 — Per-channel independent health monitoring**
-> The FDIR module shall maintain a dedicated health status flag for each sensor channel (IMU-1, IMU-2, barometer) and each actuator channel (fin 1–4). Health status shall be updated every control loop cycle.
+> The FDIR module shall maintain a dedicated health status flag for each sensor channel (IMU-1, IMU-2, barometer) and each actuator channel (canard 1–4). Health status shall be updated every control loop cycle.
 > *Category:* Functional.
 > *Priority:* Must.
 > *Rationale:* Architecture §4, D013. Independent per-channel monitoring is required to isolate faults to specific channels without affecting others. A single aggregate health flag cannot support the per-channel isolation required by the graceful degradation architecture.
@@ -336,10 +345,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-FDR-007 — Detection of actuator fault**
-> The FDIR module shall detect when a servo is unresponsive or jammed by comparing commanded fin deflection to measured fin position. Persistent mismatch beyond a defined threshold shall flag the actuator channel as faulted.
+> The FDIR module shall detect when a servo is unresponsive or jammed by comparing commanded canard deflection to measured canard position. Persistent mismatch beyond a defined threshold shall flag the actuator channel as faulted.
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* Architecture §2.4, D030. Actuator faults (jams, disconnections) must be detectable to enable mixing-matrix reconfiguration (REQ-CTL-005). Position-feedback servos are required for direct fault detection; their selection is driven by this requirement.
+> *Rationale:* Architecture §2.4, D030, D056. Actuator faults (jams, disconnections) must be detectable to enable mixing-matrix reconfiguration (REQ-CTL-005). Position-feedback servos are required for direct fault detection; their selection is driven by this requirement.
 > *Verification:* Bench test — physically stall a servo while commanding deflection; confirm FDIR detects the position mismatch and flags the actuator channel as faulted within the detection window.
 
 ---
@@ -354,11 +363,11 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-FDR-009 — Mixing-matrix swap within one control loop period**
-> Upon isolation of a faulted fin channel by the FDIR module, the control allocator shall swap to the reconfigured mixing matrix within one control loop period of the isolation event.
+> Upon isolation of a faulted canard channel by the FDIR module, the control allocator shall swap to the reconfigured mixing matrix within one control loop period of the isolation event.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* D030. Once a fin fault is confirmed and isolated, delay in applying the new mixing matrix produces a control loop cycle where moment commands are sent to a faulted actuator. The swap itself (a pre-computed matrix load) is trivial — the requirement ensures it is not deferred.
-> *Verification:* Bench test — trigger a fin fault; inspect telemetry log timestamps; confirm the mixing-matrix reconfiguration event timestamp is within one loop period of the isolation event timestamp.
+> *Rationale:* D030, D056. Once a canard fault is confirmed and isolated, delay in applying the new mixing matrix produces a control loop cycle where moment commands are sent to a faulted actuator. The swap itself (a pre-computed matrix load) is trivial — the requirement ensures it is not deferred.
+> *Verification:* Bench test — trigger a canard fault; inspect telemetry log timestamps; confirm the mixing-matrix reconfiguration event timestamp is within one loop period of the isolation event timestamp.
 
 ---
 
@@ -538,10 +547,10 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-GCS-005 — Multi-pane dashboard**
-> The ground station dashboard shall display the following panes simultaneously during active operation: live telemetry charts (attitude and sensor outputs vs. time), sensor health status and confidence indicators, a real-time 3D attitude visualisation of the rocket body, and a view of the fin assembly showing actuated control surface deflections.
+> The ground station dashboard shall display the following panes simultaneously during active operation: live telemetry charts (attitude and sensor outputs vs. time), sensor health status and confidence indicators, a real-time 3D attitude visualisation of the rocket body, and a view of the actuated control-surface (canard) assembly showing canard deflections.
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* Constraints §7. The multi-pane dashboard is the primary interface for demonstrating system state to an observer. Each pane serves a distinct observational function: telemetry charts for trend analysis, health status for FDIR visibility, 3D attitude for intuitive state reading, fin view for control system response visibility.
+> *Rationale:* Constraints §7. The multi-pane dashboard is the primary interface for demonstrating system state to an observer. Each pane serves a distinct observational function: telemetry charts for trend analysis, health status for FDIR visibility, 3D attitude for intuitive state reading, canard view for control system response visibility.
 > *Verification:* Functional test — run a complete bench session; confirm all four panes render and update during the session. Confirm panes are simultaneously visible without switching.
 
 ---
@@ -621,7 +630,7 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 ---
 
 > **REQ-PWR-004 — Rail B load assignment**
-> Rail B (servo rail) shall supply power exclusively to the four fin servos. No MCU or sensor load shall draw from Rail B.
+> Rail B (servo rail) shall supply power exclusively to the four canard servos. No MCU or sensor load shall draw from Rail B.
 > *Category:* Constraint.
 > *Priority:* Must.
 > *Rationale:* D033. The servo rail's voltage is permitted to sag under high current draw. Any MCU or sensor drawing from Rail B would experience this sag, potentially causing brownout or noise corruption — the exact failure mode Rail B isolation is designed to prevent.
