@@ -70,10 +70,9 @@ The selected IMUs (BMI160, ICM-42688-P) are 6-axis (accelerometer + gyroscope). 
 ## Airframe joint / assembly risks (added 2026-06-17 per D055 / D056)
 
 **R-AF-01 — Stringer-bore coaxiality across the joint**
-The four Ø5 stringer bores in mating sections are printed in two separate parts; if they are not coaxial within print + slip-fit tolerance, four rigid 200 mm aluminium stringers cannot be inserted across the joint, or will force misalignment. The stringers are the joint's radial/clocking datum, so this is on the assembly critical path.
-*Likelihood:* Medium. *Impact:* Medium (sections won't assemble cleanly).
-*Status:* Open — Mitigating.
-*Mitigation:* Slip-fit bores reamed/drilled to final size post-print; lead-in chamfers at bore mouths; assemble stringers first (they self-align), bolts second. Validate on the single-joint test coupon before committing a full section.
+The four Ø5 stringer bores in mating sections are printed in two separate parts; if they are not coaxial within print + slip-fit tolerance, four rigid 200 mm aluminium stringers cannot be inserted across the joint, or will force misalignment.
+*Likelihood:* — *Impact:* —
+*Status:* **Closed (D058, 2026-06-17)** — the aluminium stringers were removed entirely; the bolted flange carries bench loads with ample margin. The risk no longer exists. Residual radial-centring (now loose) is tracked instead as the exploratory centring-spigot TODO (airframe doc §12.2), not a risk.
 *Last reviewed:* 2026-06-17
 
 **R-AF-02 — Heat-set insert depth inconsistency**
@@ -83,11 +82,11 @@ Heat-set inserts can sink to inconsistent depths in a plain pilot hole, giving u
 *Mitigation:* Stepped pilot (D055 / airframe doc §5.2) — the diameter-step shoulder is a hard bottom datum so every insert seats at the same depth. Confirm on the test coupon.
 *Last reviewed:* 2026-06-17
 
-**R-AF-03 — Mass, print time, and filament cost of 12 mm-wall sections**
-A 280 mm, 12 mm-wall section is a large print (~1.7 L wall volume); ~6 sections imply roughly a spool and many print-hours each, plus failed-print risk. Within the $2k budget but a real slog and cost item (Constraints §10.1).
-*Likelihood:* High (a property of the design). *Impact:* Medium (schedule + filament budget).
-*Status:* Open — accepted.
-*Mitigation:* Budget the print time and filament explicitly; coupon-first to avoid scrapping full sections; "an airframe by tomorrow" is realistically one section + a frozen joint standard.
+**R-AF-03 — Mass, print time, and filament cost of thick-wall sections**
+A 280 mm section is a large print. The original 12 mm wall was ~1.7 L of wall volume per section; ~6 sections implied roughly a spool and many print-hours each.
+*Likelihood:* Medium. *Impact:* Low–Medium (schedule + filament budget).
+*Status:* **Mitigating / downgraded (D058, 2026-06-17).** Wall thinned 12 → 6 mm and OD 174 → 162 (wall volume cut well over half), and the first article is a minimal stack (avionics / one empty / aft-most / cosmetic mount) rather than ~6 sections. New limiting failure mode is local skin denting (low at 6 mm) — covered by the wall coupon (airframe doc §12.14).
+*Mitigation:* Coupon-first to avoid scrapping full sections; add empty sections for length only after the minimal stack is proven; add a printed ring stiffener only if a coupon dents.
 *Last reviewed:* 2026-06-17
 
 **R-AF-04 — Canard control coupling / stability**
@@ -98,9 +97,9 @@ Forward canards (D056) contribute pitch/yaw moments ahead of the CG and can coup
 *Last reviewed:* 2026-06-17
 
 **R-AF-05 — Joint assembly slog**
-~6 joints × (8 inserts + 8 bolts + 4 stringers) ≈ 48 inserts, 48 bolts, 24 stringers to install, each heat-set a chance to go crooked. Uncharacterised tedium is a planning failure (Constraints §10.1).
-*Likelihood:* Medium. *Impact:* Low–Medium.
-*Status:* Open — accepted.
+Each joint is 8 heat-set inserts + 8 bolts (no stringers, D058), every insert a chance to go in crooked. Reduced substantially by the minimal first stack (~2–3 joints, not ~6) and by removing the 24 stringers entirely. Uncharacterised tedium is a planning failure (Constraints §10.1).
+*Likelihood:* Low–Medium. *Impact:* Low.
+*Status:* Open — accepted (downgraded D058).
 *Mitigation:* Budget the assembly time; consider an insert-installation jig; standardise the joint so the process is repeatable.
 *Last reviewed:* 2026-06-17
 

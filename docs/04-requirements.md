@@ -220,8 +220,8 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 > The control law shall close the attitude loop using the estimator's attitude output as feedback. The control law shall compute actuator commands that drive the attitude error toward zero.
 > *Category:* Functional.
 > *Priority:* Must.
-> *Rationale:* Constraints §4, Architecture §4. Closed-loop attitude control is the primary functional deliverable of the avionics system. Open-loop actuation does not constitute a control system.
-> *Verification:* Bench test — apply a manual perturbation to the test stand; confirm control surfaces respond and attitude returns toward the commanded setpoint. Log confirms attitude error decreases monotonically after perturbation peak.
+> *Rationale:* Constraints §4, Architecture §4, D059. Closed-loop attitude control is the primary functional deliverable of the avionics system. Open-loop actuation does not constitute a control system. Note (D059): the static stand has no aerodynamic authority, so the loop is closed in the command path (estimator → control law → canard command), not in physical vehicle motion; the verifiable behaviour is the commanded canard response, not attitude restoration.
+> *Verification:* Bench test — apply a manual perturbation to the test stand; confirm the canards command deflection in the correct restoring sense and proportional to the estimated attitude error. Log confirms commanded canard deflection tracks the attitude-error signal. (Physical attitude restoration is not expected or required on the static stand — D059.)
 
 ---
 
@@ -261,12 +261,12 @@ Each requirement has a unique ID, a statement, a category, a priority, a rationa
 
 ---
 
-> **REQ-CTL-006 — Perturbation rejection settling time**
-> Following a manual perturbation of the test stand, the system shall return the estimated attitude to within a defined band of the commanded setpoint within [TBD — pending airframe CAD and dynamics analysis] seconds of peak perturbation.
+> **REQ-CTL-006 — Commanded-response latency**
+> Following a manual perturbation of the test stand, the control law shall command a corrective canard deflection that tracks the estimated attitude error, with the commanded response settling within [TBD — pending control-law tuning] seconds of the estimator's post-perturbation convergence.
 > *Category:* Performance.
 > *Priority:* Must.
-> *Rationale:* Pending airframe CAD. The settling time is a function of the airframe's moment of inertia, canard effectiveness, and the control law's bandwidth — none of which can be specified without airframe geometry and dynamics analysis. These inputs come from CAD and structural analysis, which run in parallel with early airframe design.
-> *Verification:* Bench test — apply a repeatable manual perturbation (defined angular impulse); measure time from perturbation peak to restoration within the defined band; average over five trials.
+> *Rationale:* D059. The static stand has no aerodynamic authority, so vehicle "settling" cannot be measured — this requirement governs the command-path response (how promptly and cleanly the canard command tracks the estimated error after a disturbance), set by the control-law bandwidth and the estimator's convergence, not by airframe moment of inertia. Physical attitude restoration is explicitly out of scope on the bench.
+> *Verification:* Bench test — apply a repeatable manual perturbation (defined angular impulse); from the log, measure the time from estimator-error peak to the commanded canard deflection settling within a defined band of its steady value; average over five trials.
 
 ---
 

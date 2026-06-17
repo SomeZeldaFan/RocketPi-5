@@ -147,17 +147,17 @@ The airframe is a custom-designed, 3D-printed semi-monocoque structure, treated 
 
 ### 3.1 Design philosophy
 
-Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by internal flanges at the section joints and by **inserted CNC-aluminium stringers** (per D044) that bridge each joint locally — not printed-in full-length spars (D055). Load envelope is bench-only — self-weight, perturbation forces during demos (tens of newtons peak), servo reaction forces on the canard pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements.
+Semi-monocoque construction adapted to FDM-printed fabrication. The printed outer skin carries primary loads, supported by internal flanges at the section joints; the bolted flanges carry joint bending and torsion (the aluminium stringers of the original scheme were removed per D058 — bench loads do not justify them). Load envelope is bench-only — self-weight, perturbation forces during demos (tens of newtons peak), servo reaction forces on the canard pivots, and handling loads from drops off the bench. No transonic flight loads, no aerodynamic stability requirements, and no aerodynamic control authority (D059).
 
 **The comprehensive, authoritative airframe description lives in `docs/cad/airframe-architecture.md`** (geometry, joint standard, datums, avionics capsule, control surfaces, power/cabling, fabrication, open items). The subsections below summarise and point there.
 
-### 3.2 Skin / frame / stringer layout
+### 3.2 Skin / frame layout
 
-Locked (D055). Cylindrical sections: OD 174, bore 150, 12 mm wall, with a 15 mm internal flange (Ø120 opening). The wall embeds four Ø5 stringer bores at R81 (12/3/6/9 o'clock); the flange carries the 8-bolt clamp ring at R67.5. The skin carries mid-span bending; aluminium stringers carry local bending across the joints only. Full geometry: `docs/cad/airframe-architecture.md` §3–§5.
+Locked (D055, revised D058). Cylindrical sections: **OD 162, bore 150, 6 mm wall**, with a 15 mm internal flange (Ø120 opening); the flange carries the 8-bolt clamp ring at R67.5. Thin skin, locally thick features (flange, insert bosses, servo brackets, fin roots). The 162 mm/6 mm-wall tube is hugely over-stiff for bench loads, so the new limiting mode is local skin denting, not bending. Full geometry: `docs/cad/airframe-architecture.md` §3–§5.
 
 ### 3.3 Segmentation strategy
 
-Locked (D055). The airframe is a stack of identical ~280 mm sections (capped by the ~300 mm print volume), joined by an internal twin-flange bolted joint with a clean fastener-free outer skin. The joint splits three jobs onto three features: flange faces = axial datum, four aluminium stringers = radial/clocking alignment datum, eight M3 bolts = clamp. Heat-set inserts use a stepped pilot whose diameter step is the insert's depth datum. Detail and the per-insert formulas: `docs/cad/airframe-architecture.md` §5 and `docs/cad/aft-most-section.md`.
+Locked (D055). The airframe is a stack of identical ~280 mm sections (capped by the ~300 mm print volume), joined by an internal twin-flange bolted joint with a clean fastener-free outer skin. The joint uses two features: flange faces = axial datum; eight M3 bolts = clamp + bending reaction (no stringers, D058). Radial centring is currently loose (seam steps finished under paint); a centring spigot is an exploratory option. Heat-set inserts use a stepped pilot whose diameter step is the insert's depth datum. First article is a minimal stack, extended later. Detail and the per-insert formulas: `docs/cad/airframe-architecture.md` §5 and `docs/cad/aft-most-section.md`.
 
 ### 3.4 Avionics bay integration
 
