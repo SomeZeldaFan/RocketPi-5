@@ -134,7 +134,7 @@ The new limiting failure mode is **local denting/buckling** of the thinner skin 
 |---|---|---|
 | Axial position | flange faces | flat faces meet; bolts pull them together |
 | Clamp + bending | 8 bolts | clamp the joint and react bench bending |
-| Radial centring / clocking | flange face + bolts (loose) | no precise datum yet; spigot is an exploratory option (§12.2); seam steps finished under paint |
+| Radial centring / clocking | flange face + bolts (loose) today | a dedicated datum is the agreed direction — flange-integrated asymmetric locating tabs between the bolts (one tight = centres + clocks; extras = foolproofing), bore kept clean; geometry not yet locked (§12.2) |
 
 ---
 
@@ -150,6 +150,21 @@ Workflow intent:
 4. The section carries **service panels** (count/location/latch **TBD §12.5**) so the capsule can be serviced in place without removing the nose for routine work.
 
 PLA is RF-transparent, so the 433 MHz radio antenna can live inside the capsule/section — no external antenna penetration is needed, which suits the fastener-free skin. In-place flashing/debugging (the wired link) is a capsule-level concern routed out through a service panel.
+
+### 6.1 Component mounting — direction (not yet locked)
+
+Direction agreed (depth deferred to a dedicated avionics pass). Components are **not** screwed directly into the PCB or into raw airframe plastic. Instead each component gets a **purpose-printed clamshell caddy**: caliper-measure the part, model a cavity slightly oversized, split it into two halves screwed shut (heat-set inserts), with **purpose-routed cable holes / strain relief**. Each caddy presents a **standardised external mounting interface** to the capsule (a common footprint or rail/grid), so any caddy bolts anywhere — this is the modular realisation of D057's "slots for avionics to bolt onto."
+
+Per-type rules (the caddy is not one-size-fits-all):
+
+- **Battery (LiPo) — special case.** No rigid compression; a swelling pouch in a hard box is a puncture/fire path. Looser cradle with **swelling clearance, venting, no sharp/screw features against the pouch, easy removal/disconnect.**
+- **Thermal.** PLA softens ~50–60 °C. Vent the warm parts — **power regulators, radio on TX, battery.** The MCU itself is low-power.
+- **IMUs — rigid + precisely aligned.** The estimator assumes a fixed, known sensor-to-body transform, so IMU caddies are tight, rigid, axes deliberately aligned, with the two IMUs in a known relative orientation. Compliant capture is fine for the battery, not for these.
+- **Magnetometer — magnetically clean.** Keep the BMM150 away from power cables and **steel fasteners** (use brass/nylon hardware nearby; route power away). Ties to RISK-001 and to the §5 magnetic-disturbance failure mode (clean nominally; disturbed deliberately for the demo).
+
+Also: preserve **connector access** for the parts you actually plug into (MCU USB/SWD for flashing, servo headers, battery plug) so the clamshell doesn't bury them; add a **crush rib or TPU/foam pad** so the fit is snug-not-stressed and vibration-damped; and model **reliefs for tall parts / pin headers**, not just an L×W×H box.
+
+To think about in the avionics pass: the standard caddy→capsule interface (footprint vs. rail/dovetail vs. insert grid), capsule volume budget, mag/cable routing layout, and which caddies need frequent-access (battery, MCU) vs. set-and-forget.
 
 ---
 
@@ -208,7 +223,10 @@ Cable routing from the capsule to the canard servos and to the servo rail crosse
 These do not block printing the cylindrical sections (the section + joint geometry is fully specified above), but a head-to-tail lock requires them. Each should be resolved and folded into the relevant section above.
 
 1. **Canard body station** — axial location of the canards (in/near the avionics section, or a dedicated section); fixes where the servos mount.
-2. **Centring spigot/register — EXPLORATORY TODO (builder to explore).** With the stringers gone, the joint has no precise radial datum. A short stepped lip on one flange nesting into a counterbore on the other would self-centre each joint, keep the skin flush, and make assembly drop-together — and, with no stringers, it would not be over-constrained. Before adopting: explore the geometry (lip height/clearance, which flange carries the male feature), what assembly looks like (insertion clearance, paint-thickness allowance), and whether it's worth it given the skin is painted. Decide adopt/skip.
+2. **Section clocking + centring — DIRECTION AGREED, geometry not yet locked (dedicated pass next).** The joint needs a way to (a) centre the two skins and (b) clock the sections so every section's 12 o'clock lines up (canards over canards, fins, panels, wiring) and the bolt holes align. **Direction:** keep the central bore/opening clean (no inner-edge ring) by putting the locating features **out on the 15 mm flange face, in the arcs between the 8 bolts** — male rectangular tabs into matching female pockets, arranged at **unequal (asymmetric) spacing** so exactly one rotation assembles (unique clock + poka-yoke; the rule is simply "no rotational symmetry in the tab pattern").
+   - **Constraint principle (avoid the stringers' over-constraint):** exactly **one** tab is a precise fit — a rectangular tab trapped in a pocket fixes x, y *and* θ, i.e. it centres *and* clocks from one feature. Any **extra** tabs are **clearance-fit foolproofing** only (they still force the single orientation, but don't fight the locator). Bolts stay loose clearance (clamp only); flange faces set axial + tilt. Result is an exactly-constrained joint.
+   - **Alternative kept on the table:** a round **centring spigot** at the bore edge gives the best all-around skin concentricity (flushest seam) but adds an inner ring and touches the opening. The flange-tab route trades a little centring precision for a clean bore and no extra part — acceptable since seams are primed/filled.
+   - **To resolve in the geometry pass:** number of tabs (one tight + N loose), exact asymmetric pattern (verify no rotational symmetry), tab/pocket fit clearance (coupon-tuned), **fillet pocket corners** (FDM crack-starter), lead-in chamfers for blind assembly, keep tabs clear of the bolt-driver path (~50 mm of arc between bolts), which flange carries the male tabs, and whether to also keep a round spigot for skin flushness. Slip fit so sections pull straight apart for service.
 3. **Canard pivot/hinge** — printed pivot vs. bearing; canard shaft material; bearing seat if any.
 4. **Static aft-fin attachment** — integral print vs. bolted root; root geometry; interaction with the Ø120 aft opening.
 5. **Nose cone retention/removal** — mechanism with no external fasteners.
@@ -228,3 +246,4 @@ These do not block printing the cylindrical sections (the section + joint geomet
 
 - **2026-06-17 (a)** — Document created. Section/joint geometry, stepped-insert depth solution, stringer datum scheme, avionics capsule, static-fin + canard control architecture, power/cabling, and fabrication plan captured. Decisions D055–D057 logged. Canard requirements re-pointed.
 - **2026-06-17 (b)** — D058: aluminium stringers removed (8-bolt flange carries bench loads with ample margin); skin wall thinned 12 → 6 mm with bore 150 preserved (OD 174 → 162); centring spigot demoted to an exploratory TODO (§12.2). D059: control surfaces are visual/commanded-response only on the static bench; REQ-CTL-001/006 reworded. First article set to a minimal stack (avionics / one empty section / aft-most / cosmetic motor mount), extend later.
+- **2026-06-17 (c)** — Directions captured (not locked, depth deferred): §12.2 section clocking + centring via flange-integrated asymmetric locating tabs between the bolts (one tight tab centres + clocks, extras foolproof, bore kept clean; round spigot kept as the higher-precision alternative); §6.1 per-component clamshell caddies with a standardised caddy→capsule interface and per-type rules (battery swelling/venting, IMU rigid+aligned, magnetometer clean, thermal venting, connector access).
