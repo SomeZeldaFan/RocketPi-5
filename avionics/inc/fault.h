@@ -33,15 +33,33 @@ void system_safe_halt(void);
  * A failure means an invariant is broken and continuing is more dangerous than
  * halting safe.
  *
- * The macro carries no file/line capture — system_safe_halt() takes no arguments
- * (locked signature). Post-mortem identification of the failing assertion is the
- * deferred hardfault-snapshot work (D053 A5), not this macro.
+ * Target build: ASSERT routes to the argument-free system_safe_halt() (locked
+ * signature, D053 A7). No file/line capture — there is no console at the halt
+ * point (the MCU spins → IWDG reset), and post-mortem location is the deferred
+ * backup-SRAM snapshot work (D053 A5), not this macro.
+ *
+ * Host test build (-DHOST_TEST): ASSERT routes to assert_fail(), which prints the
+ * failing file/line/function to stderr for immediate debuggability, then funnels
+ * into the same system_safe_halt() sink. Host-only: it adds no __FILE__/__func__
+ * string literals to the target binary and does not change the locked
+ * system_safe_halt() signature. (Host-test branch added 2026-06-17 — pending a
+ * one-line D053 amendment in docs/03-decisions-log.md.)
  */
+#ifdef HOST_TEST
+void assert_fail(const char *file, int line, const char *func);
+#define ASSERT(cond)                                    \
+    do {                                                \
+        if (!(cond)) {                                  \
+            assert_fail(__FILE__, __LINE__, __func__);  \
+        }                                               \
+    } while (0)
+#else
 #define ASSERT(cond)                 \
     do {                             \
         if (!(cond)) {               \
             system_safe_halt();      \
         }                            \
     } while (0)
+#endif
 
 #endif /* FAULT_H */

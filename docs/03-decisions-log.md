@@ -535,3 +535,15 @@ The one main-loop read-modify-write that priority does **not** make safe — cle
 - `NVIC_SystemReset()` in `system_safe_halt` instead of spinning (A7) — rejected; would reclassify a SOFTWARE reset as a fault and split the assert/hardfault funnel.
 
 **Cross-references:** the `platform.h` contract is locked to these decisions — watchdog-discipline block, `platform_reset_cause`, the `void` fail-fast init convention, the JPL Rule 5 assertion-density exemptions for the hot-path `platform_timer_us` and the single-register-write `platform_watchdog_kick`, the u32 wrap-safe timestamp idiom (`(now − then)`; rollover at 2³² µs ≈ 71.58 min is a known event, not a fault), and the TIM2 prescaler derivation (TIM2 on APB1 at 84 MHz, prescaler 83 → 1 MHz → count == µs; `datasheets/STM32F4xx.pdf` p.122). TEST-PLT-002, TEST-PLT-HW-003/004/005 and TEST-WDG-002/003 are updated to match (no per-init kicks; timeout band; reset-cause surfacing).
+
+### D053-A7 amendment — host-test ASSERT branch (file/line/func capture)
+
+**Decision:** The `ASSERT` macro in `inc/fault.h` gains a `-DHOST_TEST`-only branch. Under `HOST_TEST` a failed assertion routes to `assert_fail(__FILE__, __LINE__, __func__)` (declared in `fault.h`, defined in the host-only `avionics/test/test_support.c`), which prints the exact failing location to stderr then funnels into the same `system_safe_halt()` sink. The target build is unchanged: without `HOST_TEST`, `ASSERT` expands exactly as A7 locked it — the argument-free `system_safe_halt()`, no `__FILE__`/`__func__` literals, no signature change.
+
+**Rationale:** The Mac is now the sole software dev/test environment, so exact host failure locations materially speed algorithm debugging. Capturing location in the macro (host-only, compile-gated) rather than in `system_safe_halt`'s signature keeps the cost off the target: no flash-resident `__FILE__` strings at every assert site (JPL Rule 5 → many sites), no added work in the one halt path that must never itself fail, and the locked `void system_safe_halt(void)` signature stands. On target there is no console at the halt point (spin → IWDG reset) and post-mortem location remains the deferred backup-SRAM snapshot work (A5).
+
+**Alternatives considered:**
+- Change `system_safe_halt` to take `(file, line, func)` — rejected; pushes host-only cost onto the locked target contract for information the target cannot consume until A5.
+- `setjmp`/`longjmp` death-test harness (assert-fires-and-continue) — deferred; more machinery than the current need. `abort()` is the right minimal host behavior (SIGABRT → nonzero exit → `make test` FAIL).
+
+**Cross-references:** host build system this session — `avionics/Makefile` (`-DHOST_TEST`), `avionics/test/test_support.c`. The `fault.h` contract comment describes both branches.
