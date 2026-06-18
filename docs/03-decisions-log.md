@@ -628,3 +628,13 @@ The one main-loop read-modify-write that priority does **not** make safe — cle
 - Estimator-only (mag corrects yaw, FDIR does not gate it) — rejected; makes the §5 magnetic-disturbance failure mode undemonstrable (a core Task 5 deliverable) and lets a bad mag reading silently corrupt yaw.
 - Drop the mag from the algorithm path — rejected; reverses D054 and re-opens R-YAW-01 in substance (the mag becomes dead weight).
 - Overload an existing struct/parameter instead of adding explicit fields — rejected; opaque, and a `-Wconversion`/review hazard.
+
+### D061 — Dual-IMU estimator state: true fusion, 9-state error EKF with per-IMU gyro bias
+
+**Decision:** When `estimator.c` is implemented (Task 2), the filter is an error-state EKF with nominal quaternion + **per-IMU gyro bias**: a **9-dimensional error covariance** `[δθ(3), δb_gyro1(3), δb_gyro2(3)]`. Record-only — it needs no contract or code change now (the state vector and 9×9 covariance are private to `estimator.c`; the exported `covariance[6]` and all public types are untouched). `predicted_readings_t` already carries per-IMU accel predictions, which fits this directly.
+
+**Rationale:** A single shared 3-element gyro-bias state cannot separate the independent drift of two heterogeneous IMUs (BMI160 vs ICM-42688-P) — it estimates one blended effective bias, which is redundancy, not fusion. Per-IMU bias states make the fusion honest *and* feed the depth axis: the gyro difference `ω₁−ω₂` directly observes `b₁−b₂`, a built-in slow-drift disagreement detector that complements FDIR's gate (gross/fast) with a slow-relative-drift signal. Observability holds on a static bench: the differential bias is directly measured every tick, the common bias is observed through accel/mag attitude corrections during hand perturbations. Compute is comfortable — a 9-state sequential-update EKF (no matrix inversion) runs in ≪ 1 ms at 1 kHz on the M4F single-precision FPU. The accelerometers need no per-sensor state (each is a sequential measurement update); the drift concern is specifically gyro bias, since only the gyro integrates into unbounded attitude error.
+**Alternatives considered:**
+- 6-state shared gyro bias (redundancy / one-active-gyro model) — rejected as "fusion"; cannot represent two independent drifts. Defensible only if renamed redundancy with the second gyro as failover + cross-check.
+- Plain averaging of the two gyros — rejected; ignores per-sensor noise and bias, and destroys the disagreement signal the dual config exists to expose. Not fusion in any meaningful sense.
+- Per-IMU scale-factor + misalignment states (12–15 state) — rejected; those error modes are excited only by large sustained rates, which a static hand-perturbed bench does not see.
