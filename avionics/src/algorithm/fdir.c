@@ -38,12 +38,15 @@ void fdir_admit(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
     const baro_reading_t *baro,
+    const mag_reading_t  *mag,
     health_flags_t       *health_out,
     fdir_gate_result_t   *gate_out
 )
 {
     /* Real implementation: absolute checks (staleness, bounds, gyro-vs-gyro)
-     * → preliminary health_out + staleness fields of gate_out. */
+     * → preliminary health_out + staleness fields of gate_out.
+     * mag (D060): absolute checks only — no twin to cross-check; staleness,
+     * NaN/sat, |B| field-magnitude vs the known Earth-field magnitude. */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -54,6 +57,7 @@ void fdir_admit(
     (void)imu1;
     (void)imu2;
     (void)baro;
+    (void)mag;
     (void)health_out;
     (void)gate_out;
 }
@@ -62,13 +66,16 @@ void fdir_gate(
     const imu_reading_t        *imu1,
     const imu_reading_t        *imu2,
     const baro_reading_t       *baro,
+    const mag_reading_t        *mag,
     const predicted_readings_t *predictions,
     health_flags_t             *health_inout,
     fdir_gate_result_t         *gate_out
 )
 {
     /* Real implementation: innovation gate of each reading vs its prediction
-     * → restrict health_inout; write chi-squared / gate-open fields. */
+     * → restrict health_inout; write chi-squared / gate-open fields.
+     * mag (D060): chi2_mag = residual(measured, predictions->mag_pred_ut) χ²
+     * plus dip-angle check — analytical cross-check, no second mag. */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -79,6 +86,7 @@ void fdir_gate(
     (void)imu1;
     (void)imu2;
     (void)baro;
+    (void)mag;
     (void)predictions;
     (void)health_inout;
     (void)gate_out;

@@ -609,3 +609,22 @@ The one main-loop read-modify-write that priority does **not** make safe — cle
 - Add an airflow source (fan/tunnel) to give real authority — rejected; scope creep, and not needed for a GNC/FDIR demonstration whose depth axis is estimation and fault tolerance, not aerodynamics.
 - Leave CTL-001/006 as written — rejected; an unverifiable, physically false requirement is a documentation defect.
 **Cross-references:** D056 (canards as the software control-authority surfaces), REQ-CTL-001/003/004/006, `docs/cad/airframe-architecture.md` §7, §10.
+
+---
+
+## 2026-06-18
+
+### D060 — Magnetometer threaded through the estimator/FDIR contract (amends D050)
+
+**Decision:** Extend the D050-locked algorithm contract so the magnetometer (added as a type-only change in D054) can flow through the estimator and FDIR. Bounded, append-only additions — no removals, no restructure:
+- `predicted_readings_t` gains `float mag_pred_ut[3]` — predicted Earth field in the body frame (reference field rotated by the predicted orientation), the gate's mag-residual source.
+- `fdir_gate_result_t` gains `chi2_mag`, `mag_gate_open`, `mag_stale_us` — per-channel parity with the IMU fields.
+- `estimator_update()` gains `const mag_reading_t *mag` (after `baro`); `estimator_predict()` is unchanged (it predicts the mag internally from a stored nav-frame reference field).
+- `fdir_admit()` and `fdir_gate()` each gain `const mag_reading_t *mag` (after `baro`).
+- Architecture §4 (struct lists, tick sequence, fault chain, interface contracts) and `main.c` call sites updated to match. The `.c` bodies remain stubs — real EKF/FDIR logic is Task 2 / Task 3.
+
+**Rationale:** The estimator/FDIR signatures were locked under D050 (2026-06-14), *before* the magnetometer existed (D054, 2026-06-17), so the data path Task 2 ("magnetometer bounds yaw") and Task 3 ("chi-squared for IMU1, IMU2, and the mag") describe was absent — the reading could not reach the correction and the gate had no mag channel. This amendment is the single prerequisite gating Task 2 implementation; it follows the append-only amendment precedent of D053-A7. **Honest fault-detection framing (resolves the "single sensor, nothing to check against" concern):** the lone mag has no twin, so it gets NO direct cross-check like the dual-IMU gyro-vs-gyro pass. It is instead checkable two other ways — (1) the **innovation gate** vs the IMU-predicted field, an analytical cross-check against the attitude the gyro+accel maintain (this is what makes the constraints §5 magnetic-disturbance failure mode detectable with one sensor — voting needs redundancy, innovation gating needs only a model + complementary sensors); and (2) **absolute invariants** — `|B|` field-magnitude and dip-angle vs the known Earth field, needing no twin and (for `|B|`) no model. Covariance is meaningful with one mag: the mag update shrinks yaw covariance, isolation grows it on gyro drift — that growth-vs-shrink IS the "yaw bounded with mag, drifts without" demonstration. Accepted limit: with no twin, a slow sub-threshold disturbance or a wrong reference-field constant is not catchable; §5 targets gross "nearby metal," which the magnitude + innovation checks catch.
+**Alternatives considered:**
+- Estimator-only (mag corrects yaw, FDIR does not gate it) — rejected; makes the §5 magnetic-disturbance failure mode undemonstrable (a core Task 5 deliverable) and lets a bad mag reading silently corrupt yaw.
+- Drop the mag from the algorithm path — rejected; reverses D054 and re-opens R-YAW-01 in substance (the mag becomes dead weight).
+- Overload an existing struct/parameter instead of adding explicit fields — rejected; opaque, and a `-Wconversion`/review hazard.

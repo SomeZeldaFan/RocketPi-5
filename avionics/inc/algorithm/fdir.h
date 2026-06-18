@@ -39,6 +39,9 @@ void fdir_init(void);
  *   - staleness:  now - reading.timestamp_us > IMU_STALENESS_THRESHOLD_US
  *   - bounds:     accel / gyro / pressure outside the physical envelope, NaN, sat
  *   - gyro cross: IMU-1 vs IMU-2 gyro disagreement (needs no prediction)
+ *   - mag:        the lone mag has no twin → no cross-check here; absolute checks
+ *                 only (staleness, NaN/sat, |B| field-magnitude vs the known
+ *                 Earth-field magnitude — attitude-independent, needs no model). (D060)
  * Writes the preliminary verdict to *health_out and the staleness fields of
  * *gate_out. The gyro must clear this pass before estimator_predict() uses it.
  */
@@ -46,6 +49,7 @@ void fdir_admit(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
     const baro_reading_t *baro,
+    const mag_reading_t  *mag,
     health_flags_t       *health_out,
     fdir_gate_result_t   *gate_out
 );
@@ -56,12 +60,16 @@ void fdir_admit(
  * against CHI2_THRESHOLD_2DOF, isolating the outlier. RESTRICT-ONLY on
  * *health_inout: may clear a health flag, never sets one true. Fills the
  * chi-squared / gate-open fields of *gate_out. predictions comes from
- * estimator_predict(); FDIR does not import the estimator.
+ * estimator_predict(); FDIR does not import the estimator. The mag is gated
+ * analytically against predictions->mag_pred_ut (no second mag): chi2_mag plus
+ * a dip-angle check — this is what makes the §5 mag-disturbance mode detectable
+ * with a single sensor (D060).
  */
 void fdir_gate(
     const imu_reading_t        *imu1,
     const imu_reading_t        *imu2,
     const baro_reading_t       *baro,
+    const mag_reading_t        *mag,
     const predicted_readings_t *predictions,
     health_flags_t             *health_inout,
     fdir_gate_result_t         *gate_out

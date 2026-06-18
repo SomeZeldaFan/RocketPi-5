@@ -72,12 +72,15 @@ estimator_mode_t estimator_update(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
     const baro_reading_t *baro,
+    const mag_reading_t  *mag,
     const health_flags_t *health,
     attitude_estimate_t  *out
 )
 {
     /* Real implementation: Kalman correction on healthy channels; NULL =
-     * isolated; covariance grows for skipped channels; set the mode enum. */
+     * isolated; covariance grows for skipped channels; set the mode enum.
+     * mag (D060): sequential yaw-bounding update; NULL when isolated → yaw
+     * covariance grows on gyro drift. */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -88,6 +91,7 @@ estimator_mode_t estimator_update(
     (void)imu1;
     (void)imu2;
     (void)baro;
+    (void)mag;
     (void)health;
     (void)out;
     return EST_MODE_FAULT;

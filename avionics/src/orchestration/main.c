@@ -59,6 +59,7 @@ int main(void)
     static imu_reading_t       imu1;
     static imu_reading_t       imu2;
     static baro_reading_t      baro;
+    static mag_reading_t       mag;
     static health_flags_t      health;
     static fdir_gate_result_t  gate;
     static predicted_readings_t pred;
@@ -85,9 +86,12 @@ int main(void)
         /* [3] Service the barometer state machine (decimated to ~50 Hz internally). */
         (void)ms5611_service(&baro);
 
-        /* [4] FDIR admission: absolute checks (staleness, bounds, gyro-vs-gyro)
-         *     → preliminary health flags. Vets the gyro before predict uses it. */
-        fdir_admit(&imu1, &imu2, &baro, &health, &gate);
+        /* [3b] Magnetometer read — driver lands in task 7 (D060). Until then `mag`
+         *      holds its zero-initialised static; admit/gate/update carry it. */
+
+        /* [4] FDIR admission: absolute checks (staleness, bounds, gyro-vs-gyro,
+         *     mag |B|) → preliminary health flags. Vets the gyro before predict. */
+        fdir_admit(&imu1, &imu2, &baro, &mag, &health, &gate);
 
         /* [5] Estimator predict: propagate on the admitted gyro and export the
          *     predicted measurements for the gate. NULL for a gyro the
@@ -98,14 +102,15 @@ int main(void)
 
         /* [6] FDIR gate: innovation gate of each reading vs its prediction
          *     → final health flags (restrict-only). */
-        fdir_gate(&imu1, &imu2, &baro, &pred, &health, &gate);
+        fdir_gate(&imu1, &imu2, &baro, &mag, &pred, &health, &gate);
 
         /* [7] Estimator correct: Kalman update on healthy channels only.
          *     NULL = isolated (post-gate verdict). */
         const imu_reading_t  *est_imu1 = health.imu1_healthy ? &imu1 : (const imu_reading_t *)0;
         const imu_reading_t  *est_imu2 = health.imu2_healthy ? &imu2 : (const imu_reading_t *)0;
         const baro_reading_t *est_baro = health.baro_healthy ? &baro : (const baro_reading_t *)0;
-        (void)estimator_update(est_imu1, est_imu2, est_baro, &health, &estimate);
+        const mag_reading_t  *est_mag  = health.mag_healthy  ? &mag  : (const mag_reading_t *)0;
+        (void)estimator_update(est_imu1, est_imu2, est_baro, est_mag, &health, &estimate);
 
         /* [8] Control law: attitude error → deflection commands.
          *     Reads system mode from mode_fsm (set by previous tick's [12]). */

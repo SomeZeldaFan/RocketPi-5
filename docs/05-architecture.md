@@ -219,10 +219,11 @@ Bare-metal superloop (D043). TIM2 hardware timer fires a tick flag at the contro
 [1]  bmi160_read()              — consume IMU-1 DMA buffer, attach TIM2 timestamp
 [2]  icm42688p_read()           — consume IMU-2 DMA buffer, attach TIM2 timestamp
 [3]  ms5611_service()           — barometer: poll every N ticks (~50 Hz, decimated internally)
-[4]  fdir_admit()              — absolute checks (staleness, bounds, gyro-vs-gyro) → preliminary health_flags
-[5]  estimator_predict()       — propagate on admitted gyro → predicted_readings_t (NULL for an admitted-out gyro)
-[6]  fdir_gate()               — innovation gate vs predicted measurements → final health_flags (restrict-only)
-[7]  estimator_update()        — EKF correction on healthy channels; NULL pointers for isolated sensors
+[3b] magnetometer read          — yaw reference (BMM150, dedicated I2C); driver lands task 7 (D060)
+[4]  fdir_admit()              — absolute checks (staleness, bounds, gyro-vs-gyro, mag |B|) → preliminary health_flags
+[5]  estimator_predict()       — propagate on admitted gyro → predicted_readings_t (accel + mag_pred_ut; NULL for an admitted-out gyro)
+[6]  fdir_gate()               — innovation gate vs predicted measurements (incl. mag) → final health_flags (restrict-only)
+[7]  estimator_update()        — EKF correction on healthy channels (incl. mag → yaw); NULL pointers for isolated sensors
 [8]  control_law_update()       — attitude error → fin deflection commands
 [9]  actuators_write()          — deflection → PWM registers (hard-clamped to mode limits)
 [10] telemetry_pack_and_send()  — pack downlink frame, CRC-16, queue to SiK DMA TX
@@ -275,8 +276,9 @@ All types shared between modules are defined in `avionics_types.h`. No module de
 **Data structs:**
 - `imu_reading_t`: `accel_mss[3]`, `gyro_rads[3]`, `timestamp_us`, `status`
 - `baro_reading_t`: `pressure_pa`, `temperature_c`, `altitude_m`, `timestamp_us`, `status`
-- `fdir_gate_result_t`: `chi2_imu1`, `chi2_imu2`, `imu1_gate_open`, `imu2_gate_open`, `imu1_stale_us`, `imu2_stale_us`
-- `health_flags_t`: `imu1_healthy`, `imu2_healthy`, `baro_healthy`, `actuator_healthy[4]`, `radio_healthy`, `wired_healthy`
+- `fdir_gate_result_t`: `chi2_imu1`, `chi2_imu2`, `chi2_mag`, `imu1_gate_open`, `imu2_gate_open`, `mag_gate_open`, `imu1_stale_us`, `imu2_stale_us`, `mag_stale_us` (D060)
+- `predicted_readings_t`: `imu1_accel_pred_mss[3]`, `imu2_accel_pred_mss[3]`, `mag_pred_ut[3]`, `timestamp_us` (D060)
+- `health_flags_t`: `imu1_healthy`, `imu2_healthy`, `baro_healthy`, `mag_healthy`, `actuator_healthy[4]`, `radio_healthy`, `wired_healthy`
 - `attitude_estimate_t`: `roll_rad`, `pitch_rad`, `yaw_rad`, `roll_rate_rads`, `pitch_rate_rads`, `yaw_rate_rads`, `covariance[6]`, `mode`, `timestamp_us`
 - `actuator_cmd_t`: `deflection_rad[4]`, `timestamp_us`, `mode`
 - `telemetry_frame_t`: `protocol_version`, `frame_id`, `timestamp_us`, `imu1`, `imu2`, `baro`, `estimate`, `actuators`, `health`, `sys_mode`, `crc16`
@@ -299,7 +301,7 @@ Sensor driver
         ↓
 FDIR module
   └─ health_flags_t             ← authoritative per-channel health
-  └─ fdir_gate_result_t         ← chi² values, gate open/closed, stale durations
+  └─ fdir_gate_result_t         ← chi² values (IMU1/IMU2/mag), gate open/closed, stale durations
         ↓
 Estimator
   └─ attitude_estimate_t.mode   ← DUAL_IMU → IMU1_ONLY → IMU2_ONLY → DEAD_RECKONING
@@ -332,9 +334,9 @@ Ground station dashboard
 
 **sik_radio:** `_init()`, `_rx_pending() → bool`, `_rx_read(command_frame_t *out) → bool`, `_tx_send(const telemetry_frame_t *frame) → bool`. Raw byte transport only — no protocol logic.
 
-**fdir:** `_init()`. `_admit(imu1, imu2, baro, health_out, gate_out)` — absolute checks (staleness, bounds, gyro-vs-gyro), writes the preliminary health verdict; runs before `estimator_predict()`. `_gate(imu1, imu2, baro, predictions, health_inout, gate_out)` — innovation gate against the estimator's predicted measurements; restrict-only on health; runs after `estimator_predict()`. FDIR is the sole writer of `health_flags_t` and never imports the estimator (D050).
+**fdir:** `_init()`. `_admit(imu1, imu2, baro, mag, health_out, gate_out)` — absolute checks (staleness, bounds, gyro-vs-gyro, and mag `|B|` magnitude — the lone mag has no twin, so no cross-check), writes the preliminary health verdict; runs before `estimator_predict()`. `_gate(imu1, imu2, baro, mag, predictions, health_inout, gate_out)` — innovation gate against the estimator's predicted measurements (incl. mag vs `predictions->mag_pred_ut`); restrict-only on health; runs after `estimator_predict()`. FDIR is the sole writer of `health_flags_t` and never imports the estimator (D050, mag threaded D060).
 
-**estimator:** `_init()`, `_reset()`. `_predict(imu1, imu2, predictions_out)` — propagates the a-priori state on the admitted gyro and exports `predicted_readings_t` for the gate; a gyro isolated by `fdir_admit` arrives as NULL. `_update(imu1, imu2, baro, health, out) → estimator_mode_t` — EKF correction on healthy channels only; NULL = isolated; covariance grows for any skipped channel (D050).
+**estimator:** `_init()`, `_reset()`. `_predict(imu1, imu2, predictions_out)` — propagates the a-priori state on the admitted gyro and exports `predicted_readings_t` for the gate (accel per IMU + `mag_pred_ut` = reference field rotated by predicted orientation); a gyro isolated by `fdir_admit` arrives as NULL. `_update(imu1, imu2, baro, mag, health, out) → estimator_mode_t` — EKF correction on healthy channels only (mag bounds yaw); NULL = isolated; covariance grows for any skipped channel (D050, mag threaded D060).
 
 **control_law:** `_init()`, `_update(est, health, sys_mode, out) → control_mode_t`. Reconfigures mixing matrix based on `health.actuator_healthy[4]`.
 

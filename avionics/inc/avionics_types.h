@@ -197,14 +197,23 @@ typedef struct {
  * chi2_imu1/2:       normalised chi-squared residual for each IMU this tick
  * imu1/2_gate_open:  true = reading accepted by the innovation gate
  * imu1/2_stale_us:   microseconds since the last valid reading on this channel
+ *
+ * chi2_mag:          mag innovation chi-squared (measured field vs mag_pred_ut).
+ *                    The lone mag has no twin to cross-check; its gate is the
+ *                    analytical innovation test vs the IMU-predicted field (D060).
+ * mag_gate_open:     true = mag reading accepted by the innovation gate
+ * mag_stale_us:      microseconds since the last valid mag reading
  */
 typedef struct {
     float    chi2_imu1;
     float    chi2_imu2;
+    float    chi2_mag;
     bool     imu1_gate_open;
     bool     imu2_gate_open;
+    bool     mag_gate_open;
     uint32_t imu1_stale_us;
     uint32_t imu2_stale_us;
+    uint32_t mag_stale_us;
 } fdir_gate_result_t;
 
 /*
@@ -215,10 +224,15 @@ typedef struct {
  * vector = gravity direction rotated into the body frame given the predicted
  * orientation; the gate forms residual = measured - predicted. Baro is
  * correction-only this cycle — no predicted altitude field. (D050)
+ *
+ * mag_pred_ut: predicted Earth field in the body frame — the nav-frame
+ * reference field rotated by the predicted orientation. Source for the mag
+ * innovation residual in fdir_gate (D060). Single mag → one prediction.
  */
 typedef struct {
     float    imu1_accel_pred_mss[3];
     float    imu2_accel_pred_mss[3];
+    float    mag_pred_ut[3];
     uint32_t timestamp_us;
 } predicted_readings_t;
 

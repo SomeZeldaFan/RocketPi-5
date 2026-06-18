@@ -49,7 +49,9 @@ void estimator_reset(void);
  * Predict phase. Propagate the a-priori state using the admitted gyro and write
  * the predicted measurements to *predictions_out for fdir_gate(). imu1 / imu2
  * may be NULL when fdir_admit() isolated that gyro. Baro is not an input: it
- * drives no propagation (it is a correction measurement only).
+ * drives no propagation (it is a correction measurement only). The mag is not
+ * an input either: its prediction (predictions_out->mag_pred_ut) is the stored
+ * nav-frame reference field rotated by the predicted orientation (D060).
  */
 void estimator_predict(
     const imu_reading_t  *imu1,
@@ -58,14 +60,17 @@ void estimator_predict(
 );
 
 /*
- * Correct phase. Kalman update using only healthy channels; imu1, imu2, baro
- * are NULL when isolated. Fills *out (attitude, covariance, mode) and returns
- * the estimator_mode_t selected this tick.
+ * Correct phase. Kalman update using only healthy channels; imu1, imu2, baro,
+ * mag are NULL when isolated. The mag bounds yaw (the only absolute heading
+ * reference); with it isolated, yaw covariance grows on gyro drift (D060).
+ * Fills *out (attitude, covariance, mode) and returns the estimator_mode_t
+ * selected this tick.
  */
 estimator_mode_t estimator_update(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
     const baro_reading_t *baro,
+    const mag_reading_t  *mag,
     const health_flags_t *health,
     attitude_estimate_t  *out
 );
