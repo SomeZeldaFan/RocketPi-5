@@ -1,0 +1,16 @@
+[project]
+name = "rocketgcs"
+version = "0.0.1"
+description = "RocketPi5 ground control station — telemetry RX, C2 uplink, logging, dashboard (Pi 5, per D032)."
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rocketgcs*"]

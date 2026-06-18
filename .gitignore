@@ -2,3 +2,9 @@
 datasheets/
 avionics/build/
 docs/cad-printing-reference/
+
+# Python (GCS)
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
