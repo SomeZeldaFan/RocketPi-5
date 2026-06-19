@@ -62,7 +62,7 @@ Locked values are stated; provisional values are marked **(prov.)** and resolved
 | G9 | Aft-most end opening | Ø120 | Cosmetic motor-mount interface — role TBD (§12.9) |
 | J1 | Bolt ring count | 8 | Provides axial clamp **and** reacts joint bending (stringers removed) |
 | J2 | Bolt pitch radius | 67.5 mm | Centred in the 15 mm flange (R60→R75) |
-| J3 | Bolt size | M3 **(prov.)** | M3 vs M4 open (§12.11) |
+| J3 | Bolt size | M3×0.5 socket-head cap, A2 stainless (selected) | head Ø 5.68 / H 3.0 / hex 2.5; §9.2 |
 | J4 | Thin-flange hole (upper) | screw clearance, Ø≈3.3 for M3 **(prov.)** | Pass-through; **current CAD carries Ø5.7 placeholder** |
 | J5 | Thick-flange hole (lower) | stepped insert pilot (see §5.2) | Heat-set insert seat + screw-tip relief |
 | J6 | Thin-flange depth (upper) | ~3 mm **(prov.)** | Pass-through plate |
@@ -221,12 +221,17 @@ How the model is built (tool: Onshape, parametric — the existing `aft-most.ste
 
 | Item | Published dims to capture | Drives (CAD features) |
 |---|---|---|
-| **M3 screws** (amazon.ae) | nominal Ø, head Ø, head height, length-under-head, thread length | thin-flange clearance hole (J4), screw length (no bottoming), head clearance |
+| **M3 screws** — *selected* (see note) | captured: head Ø 5.68, head H 3.0, hex 2.5, M3×0.5 | thin-flange clearance hole (J4), screw length (no bottoming), head clearance |
 | **Heat-set inserts** (M3) | recommended pilot Ø, insert length, insert OD (max knurl) | Stage-1 pilot Ø + depth, Stage-2 Ø (must be **< insert OD**) — §5.2 |
 | **Insert soldering tips** | tip size matched to the insert (M3) | install only (not a CAD dim) — must match the purchased insert |
 | **Dowel pins** (fin locking) | nominal Ø, length, tolerance class | dowel-hole Ø + fit allowance, engagement depth, fin-root dowel pattern |
 
 Dowels sit at the aft fins, far from the nose-end magnetometer, so steel dowels there are magnetically fine. Once these are in and the fit-allowance variables are set, export a STEP and run `tools/step_audit.py` to check the fit-stack against this schedule and §3 (nominal/design-intent check), then coupon-print to validate the as-printed tolerance.
+
+**Selected hardware:**
+
+- **M3 screws — Hexagonal Socket Head Cap, A2 stainless, 100-pc/pack.** Captured dims: thread M3×0.5, head Ø 5.68 mm, head height 3.0 mm, hex drive 2.5 mm. Buy lengths **12 mm + 16 mm** (joint bolts; 12 nominal, 16 safe-long) and **6–8 mm** (caddy clamshells). Needs a **2.5 mm ball-end hex key** for blind internal bolts (separate item). amazon.ae ASIN **B0FWQJT9NV** — https://www.amazon.ae/dp/B0FWQJT9NV
+  - *Screw length stays provisional-confirmed until the insert is chosen (its published length finalizes 12 vs 16 as nominal — §5.2).*
 
 ### 9.3 STEP audit tool
 
@@ -269,7 +274,7 @@ These do not block printing the cylindrical sections (the section + joint geomet
 8. **Cable mating** — capsule ↔ canard servos ↔ servo power: hand-connect through a panel vs. blind-mate on insertion.
 9. **Aft-most Ø120 end opening role** — confirm the cosmetic motor-mount interface; model it after a recognisable motor (e.g. a KSP-style engine) for visual appeal.
 10. **Total length / additional empty sections** — extend the minimal first stack with empty sections for length once the hard interfaces are proven.
-11. **Screw size** — M3 vs M4 for the bolt ring; drives J3/J4/J5 and the §5.2 numbers. Replace the current Ø5.7 CAD placeholder once chosen.
+11. **Screw size — RESOLVED:** M3×0.5 socket-head cap, A2 stainless (§9.2). Still to do: replace the current Ø5.7 CAD placeholder with the real J4 clearance (~Ø3.4) once the insert finalizes the §5.2 stack.
 12. **Joint-standard uniformity** — whether the avionics and aft-most sections use the identical joint standard or deviate.
 13. **Heat-set insert model** — exact insert + vendor drawing (sets the §5.2 Stage-1 diameter and `L_insert`).
 14. **Wall-denting coupon at 6 mm** — confirm the 6 mm skin resists handling point-loads; add a ring stiffener only if needed.
