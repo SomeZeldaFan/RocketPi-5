@@ -34,8 +34,10 @@ typedef volatile uint8_t volatile_flag_t;
  * The ground station checks this on receipt and alerts the operator on a
  * mismatch before bad data propagates. Increment whenever frame layout changes.
  */
-/* v2 (D054, 2026-06-17): mag_healthy added to health_flags_t — frame layout changed. */
-#define AVIONICS_PROTOCOL_VERSION ((uint8_t)2U)
+/* v2 (D054, 2026-06-17): mag_healthy added to health_flags_t — frame layout changed.
+ * v3 (D062, 2026-06-18): attitude_estimate_t.covariance widened [6]→[9] (full
+ * 9-state EKF error diagonal) — frame layout changed. */
+#define AVIONICS_PROTOCOL_VERSION ((uint8_t)3U)
 
 /* =========================================================================
  * SYSTEM CONSTANTS
@@ -254,9 +256,14 @@ typedef struct {
 /* =========================================================================
  * DATA STRUCTS — ESTIMATOR OUTPUT
  * =========================================================================
- * covariance[6]: diagonal of the P matrix — [roll, pitch, yaw, droll, dpitch, dyaw].
+ * covariance[9]: diagonal of the 9-state EKF error covariance P (D061, D062) —
+ *   [0..2] attitude-error variances        [δθ_roll, δθ_pitch, δθ_yaw]
+ *   [3..5] IMU-1 gyro-bias-error variances [δb1_x, δb1_y, δb1_z]
+ *   [6..8] IMU-2 gyro-bias-error variances [δb2_x, δb2_y, δb2_z]
  * Grows as sensors are isolated. Mandatory in every output — a consumer that
- * ignores covariance ignores the system's self-reported confidence.
+ * ignores covariance ignores the system's self-reported confidence. The two
+ * bias triplets also expose the per-IMU drift and the differential-bias fault
+ * signal (D061) to the ground station.
  */
 typedef struct {
     float            roll_rad;
@@ -265,7 +272,7 @@ typedef struct {
     float            roll_rate_rads;
     float            pitch_rate_rads;
     float            yaw_rate_rads;
-    float            covariance[6];
+    float            covariance[9];
     estimator_mode_t mode;
     uint32_t         timestamp_us;
 } attitude_estimate_t;

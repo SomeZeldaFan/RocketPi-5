@@ -60,16 +60,17 @@ void estimator_predict(
 );
 
 /*
- * Correct phase. Kalman update using only healthy channels; imu1, imu2, baro,
- * mag are NULL when isolated. The mag bounds yaw (the only absolute heading
- * reference); with it isolated, yaw covariance grows on gyro drift (D060).
+ * Correct phase. Kalman update using only healthy channels; imu1, imu2, mag are
+ * NULL when isolated. The mag bounds yaw (the only absolute heading reference);
+ * with it isolated, yaw covariance grows on gyro drift (D060). Baro is NOT an
+ * input: altitude is unobservable in an attitude-only state, so the estimator
+ * does not fuse it (D062); FDIR still monitors baro health independently.
  * Fills *out (attitude, covariance, mode) and returns the estimator_mode_t
  * selected this tick.
  */
 estimator_mode_t estimator_update(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
-    const baro_reading_t *baro,
     const mag_reading_t  *mag,
     const health_flags_t *health,
     attitude_estimate_t  *out

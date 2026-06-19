@@ -279,7 +279,7 @@ All types shared between modules are defined in `avionics_types.h`. No module de
 - `fdir_gate_result_t`: `chi2_imu1`, `chi2_imu2`, `chi2_mag`, `imu1_gate_open`, `imu2_gate_open`, `mag_gate_open`, `imu1_stale_us`, `imu2_stale_us`, `mag_stale_us` (D060)
 - `predicted_readings_t`: `imu1_accel_pred_mss[3]`, `imu2_accel_pred_mss[3]`, `mag_pred_ut[3]`, `timestamp_us` (D060)
 - `health_flags_t`: `imu1_healthy`, `imu2_healthy`, `baro_healthy`, `mag_healthy`, `actuator_healthy[4]`, `radio_healthy`, `wired_healthy`
-- `attitude_estimate_t`: `roll_rad`, `pitch_rad`, `yaw_rad`, `roll_rate_rads`, `pitch_rate_rads`, `yaw_rate_rads`, `covariance[6]`, `mode`, `timestamp_us`
+- `attitude_estimate_t`: `roll_rad`, `pitch_rad`, `yaw_rad`, `roll_rate_rads`, `pitch_rate_rads`, `yaw_rate_rads`, `covariance[9]` (D062: 9-state EKF error diagonal — `[δθ×3, δb1×3, δb2×3]`), `mode`, `timestamp_us`
 - `actuator_cmd_t`: `deflection_rad[4]`, `timestamp_us`, `mode`
 - `telemetry_frame_t`: `protocol_version`, `frame_id`, `timestamp_us`, `imu1`, `imu2`, `baro`, `estimate`, `actuators`, `health`, `sys_mode`, `crc16`
 - `command_frame_t`: `protocol_version`, `cmd_seq`, `command`, `timestamp_us`, `crc16`
@@ -336,7 +336,7 @@ Ground station dashboard
 
 **fdir:** `_init()`. `_admit(imu1, imu2, baro, mag, health_out, gate_out)` — absolute checks (staleness, bounds, gyro-vs-gyro, and mag `|B|` magnitude — the lone mag has no twin, so no cross-check), writes the preliminary health verdict; runs before `estimator_predict()`. `_gate(imu1, imu2, baro, mag, predictions, health_inout, gate_out)` — innovation gate against the estimator's predicted measurements (incl. mag vs `predictions->mag_pred_ut`); restrict-only on health; runs after `estimator_predict()`. FDIR is the sole writer of `health_flags_t` and never imports the estimator (D050, mag threaded D060).
 
-**estimator:** `_init()`, `_reset()`. `_predict(imu1, imu2, predictions_out)` — propagates the a-priori state on the admitted gyro and exports `predicted_readings_t` for the gate (accel per IMU + `mag_pred_ut` = reference field rotated by predicted orientation); a gyro isolated by `fdir_admit` arrives as NULL. `_update(imu1, imu2, baro, mag, health, out) → estimator_mode_t` — EKF correction on healthy channels only (mag bounds yaw); NULL = isolated; covariance grows for any skipped channel (D050, mag threaded D060).
+**estimator:** `_init()`, `_reset()`. `_predict(imu1, imu2, predictions_out)` — propagates the a-priori state on the admitted gyro and exports `predicted_readings_t` for the gate (accel per IMU + `mag_pred_ut` = reference field rotated by predicted orientation); a gyro isolated by `fdir_admit` arrives as NULL. `_update(imu1, imu2, mag, health, out) → estimator_mode_t` — EKF correction on healthy channels only (mag bounds yaw); NULL = isolated; covariance grows for any skipped channel. Baro is not an estimator input (D062 — altitude unobservable in the attitude-only state; FDIR still monitors baro). 9-state error-state MEKF with per-IMU gyro bias (D061), exporting `covariance[9]` (D050, mag threaded D060, baro removed + covariance widened D062).
 
 **control_law:** `_init()`, `_update(est, health, sys_mode, out) → control_mode_t`. Reconfigures mixing matrix based on `health.actuator_healthy[4]`.
 

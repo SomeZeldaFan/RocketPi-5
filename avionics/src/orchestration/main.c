@@ -108,9 +108,10 @@ int main(void)
          *     NULL = isolated (post-gate verdict). */
         const imu_reading_t  *est_imu1 = health.imu1_healthy ? &imu1 : (const imu_reading_t *)0;
         const imu_reading_t  *est_imu2 = health.imu2_healthy ? &imu2 : (const imu_reading_t *)0;
-        const baro_reading_t *est_baro = health.baro_healthy ? &baro : (const baro_reading_t *)0;
         const mag_reading_t  *est_mag  = health.mag_healthy  ? &mag  : (const mag_reading_t *)0;
-        (void)estimator_update(est_imu1, est_imu2, est_baro, est_mag, &health, &estimate);
+        /* Baro is not an estimator input (D062) — altitude is unobservable in the
+         * attitude-only state; FDIR still consumes baro for health monitoring. */
+        (void)estimator_update(est_imu1, est_imu2, est_mag, &health, &estimate);
 
         /* [8] Control law: attitude error → deflection commands.
          *     Reads system mode from mode_fsm (set by previous tick's [12]). */

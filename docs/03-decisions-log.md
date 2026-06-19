@@ -638,3 +638,34 @@ The one main-loop read-modify-write that priority does **not** make safe — cle
 - 6-state shared gyro bias (redundancy / one-active-gyro model) — rejected as "fusion"; cannot represent two independent drifts. Defensible only if renamed redundancy with the second gyro as failover + cross-check.
 - Plain averaging of the two gyros — rejected; ignores per-sensor noise and bias, and destroys the disagreement signal the dual config exists to expose. Not fusion in any meaningful sense.
 - Per-IMU scale-factor + misalignment states (12–15 state) — rejected; those error modes are excited only by large sustained rates, which a static hand-perturbed bench does not see.
+
+### D062 — Estimator design lock + contract finalization (builds on D061; amends D050/D060)
+
+**Decision:** Lock the full `estimator.c` implementation design so the coding session is pure algorithm, and finalize two contract points it requires.
+
+*Filter / math:*
+- **Error-state (multiplicative) EKF**, 9-state error covariance `[δθ(3), δb_gyro1(3), δb_gyro2(3)]` over a nominal quaternion + per-IMU gyro bias (D061).
+- **Propagation:** small-angle *linear* quaternion update + renormalize each tick (no `sin/cos` — at 1 kHz the per-step angle ≈ 0.001·ω rad); propagate on the **inverse-variance-blended bias-corrected rate**; covariance `P ← F·P·Fᵀ + Q`.
+- **Corrections:** **sequential scalar updates** (each measurement component processed singly, diagonal `R`) → no matrix inversion anywhere; **Joseph-form** covariance update. Measurements: accel₁, accel₂ (bound roll/pitch), mag (bounds yaw), and the **differential-bias pseudo-measurement** `(ω₁−b̂₁)−(ω₂−b̂₂) ≈ 0`, Jacobian `H=[0|I|−I]`, noise `R_diff = R₁+R₂` — makes the per-IMU biases observable and feeds the differential-drift fault signal. The estimator reads *raw* gyro data (always did, as input), not FDIR's verdict → no D050 boundary violation.
+- **Numerical hygiene (single-precision float — the FPU is single-precision; double would be soft-emulated):** renormalize the quaternion each step, symmetrize `P ← (P+Pᵀ)/2`, enforce a diagonal **PD-floor** (no variance silently reaches zero — TEST-EST-008), guard NaN/inf, ≥2 ASSERT/function.
+- **Conventions:** Hamilton quaternion, NED nav frame (documented to kill sign bugs).
+- **Init / reset:** attitude seeded from the first accel (roll/pitch) + mag (yaw); biases zero; `P` large-attitude / moderate-bias priors; `reset()` returns a deterministic known state for replay (TEST-EST-009/011).
+- **Degraded modes:** an isolated IMU has its **bias state frozen** (its covariance does not grow unbounded); `DEAD_RECKONING` (both gyros gone) propagates on the **last blended bias-corrected rate** with covariance growing; mag isolated → no yaw update → yaw covariance grows.
+
+*Resource / discipline:* Compute is **not** the binding constraint — a dense 9-state MEKF at 1 kHz is comfortably single-digit-% CPU on the M4F (to be confirmed on the Task-8 target build); the binding constraints are single-precision numerical health, memory footprint (P is 324 B; total < a few KB of 192 KB), and JPL auditability. Therefore: **simple + robust + auditable first; profile-then-optimize on target** (no premature sparse-block math). JPL Power of 10 throughout — fixed-size matrices, no malloc, bounded loops, no recursion; **purpose-built fixed-size** math primitives, not a general matrix library. All tuning constants (`R`, `Q`, initial `P`, `g_nav`, `B_nav` from an Abu-Dhabi geomagnetic model) ship as **provisionals with a prominent must-replace marker** next to the code (per LR-2 / geomag source) before the code is considered final.
+
+*Contract finalization (the two code-facing tweaks, applied this session):*
+1. **Baro removed from `estimator_update`** — altitude is unobservable in an attitude-only state, so the estimator does not fuse baro. Param dropped from the signature (and `main.c` call site); FDIR (`fdir_admit`/`fdir_gate`) still monitors baro health independently, and telemetry still carries it.
+2. **`attitude_estimate_t.covariance[6] → [9]`** — exports the full 9-state error diagonal `[δθ×3, δb1×3, δb2×3]`, mapping the EKF cleanly and surfacing per-IMU bias + the differential-drift fault signal to the GCS. This changes the `telemetry_frame_t` wire layout → **`AVIONICS_PROTOCOL_VERSION` bumped 2 → 3**; the GCS parser (task 9) and telemetry serializer must match.
+
+*Verification / coverage:* the `make coverage` reporter (clang `--coverage` → `llvm-cov`, a separate instrumented build) is pulled into Task 2 and built **after** the implementation; the ≥90%-branch G1 bar is met by a harness that drives every degraded-mode and numerical-guard branch (coverage measures, assertions verify).
+
+**Rationale:** Recording the complete design up front lets the implementation session reserve full capacity for the code (per Sultan's working method — code lands section-by-section, ≤50 lines/commit, ≥5 explanatory paragraphs each). The MEKF + sequential-scalar + Joseph + small-angle stack is mutually reinforcing for JPL compliance and single-precision robustness, which is the actual risk surface here (not speed). Baro-out keeps the state minimal and honest; `covariance[9]` is the natural export of a 9-state filter and is free to change now while telemetry/control-law/GCS are still stubs.
+
+**Alternatives considered:**
+- 6-state shared gyro bias — rejected (D061): cannot separate two drifts.
+- Vector measurement update with explicit `S⁻¹` — rejected; sequential scalar avoids all matrix inversion and is more numerically robust (requires only diagonal `R`, which holds for axis-independent accel/mag noise).
+- Naive `(I−KH)P` covariance update — rejected; loses symmetry/PD in single precision. Joseph form is the robust choice and the cost is affordable given the compute headroom.
+- Baro fused via a vertical channel — rejected; grows the state and the output contract for a quantity unobservable on a static, non-translating bench.
+- Keep `covariance[6]` — rejected; cannot represent the 9-state diagonal; a partial export hides exactly the per-IMU bias health the depth axis wants visible.
+- Build sparse-block covariance math up front — rejected; adds bug surface and hurts auditability for a speed gain we do not need.

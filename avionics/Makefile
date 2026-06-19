@@ -65,4 +65,15 @@ test: $(EXES)
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all test clean
+# Branch-coverage report for the estimator. A SEPARATE instrumented build
+# (Apple clang source-based coverage) — the strict production build above is
+# untouched, so --coverage never pollutes -Werror. G1 bar: >= 90% branch.
+coverage: | $(BUILD)
+	$(CC) $(CFLAGS) -fprofile-instr-generate -fcoverage-mapping \
+	    test/estimator_cov.c $(SUPPORT) -o $(BUILD)/estimator_cov
+	cd $(BUILD) && LLVM_PROFILE_FILE=est.profraw ./estimator_cov >/dev/null
+	xcrun llvm-profdata merge -sparse $(BUILD)/est.profraw -o $(BUILD)/est.profdata
+	xcrun llvm-cov report $(BUILD)/estimator_cov \
+	    -instr-profile=$(BUILD)/est.profdata src/algorithm/estimator.c
+
+.PHONY: all test clean coverage
