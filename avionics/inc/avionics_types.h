@@ -36,8 +36,11 @@ typedef volatile uint8_t volatile_flag_t;
  */
 /* v2 (D054, 2026-06-17): mag_healthy added to health_flags_t — frame layout changed.
  * v3 (D062, 2026-06-18): attitude_estimate_t.covariance widened [6]→[9] (full
- * 9-state EKF error diagonal) — frame layout changed. */
-#define AVIONICS_PROTOCOL_VERSION ((uint8_t)3U)
+ * 9-state EKF error diagonal) — frame layout changed.
+ * v4 (D063, 2026-06-19): telemetry_frame_t gains fdir_gate_result_t gate (chi²,
+ * gate-open, staleness, gyro_disagree) + reset_cause_t reset_cause (D053 A4/A6) —
+ * frame layout changed. The FDIR gate output and reboot cause are now downlinked. */
+#define AVIONICS_PROTOCOL_VERSION ((uint8_t)4U)
 
 /* =========================================================================
  * SYSTEM CONSTANTS
@@ -56,8 +59,13 @@ typedef volatile uint8_t volatile_flag_t;
  * A reading older than 5 loop cycles is stale regardless of sensor status. */
 #define IMU_STALENESS_THRESHOLD_US   ((uint32_t)5000U)
 
-/* TBD — LR-3: chi-squared threshold for 2-DOF innovation gate at chosen confidence level */
-/* #define CHI2_THRESHOLD_2DOF */
+/* PROVISIONAL — LR-3 (D063): chi-squared threshold for the 2-DOF innovation gate.
+ * 13.8 ≈ the 99.9% point of χ²₂ — deliberately generous so the provisional gate
+ * keeps the false-positive rate low (TEST-FDR-015) until LR-3 derives it from
+ * datasheet noise + a detection-latency / false-positive tradeoff. Shared by
+ * fdir.c (the gate) and test_fdir.c (BND-002, which probes it exactly).
+ * *** MUST BE REPLACED with the LR-3-derived threshold before ship. *** */
+#define CHI2_THRESHOLD_2DOF (13.8f)
 
 /* =========================================================================
  * STATUS ENUMS — SENSOR DRIVERS
@@ -205,6 +213,14 @@ typedef struct {
  *                    analytical innovation test vs the IMU-predicted field (D060).
  * mag_gate_open:     true = mag reading accepted by the innovation gate
  * mag_stale_us:      microseconds since the last valid mag reading
+ *
+ * gyro_disagree:     IMU1-vs-IMU2 gyro cross-check tripped (|ω₁−ω₂| over the
+ *                    threshold) this tick. A DETECTOR ONLY — two sensors cannot
+ *                    name the culprit, so FDIR isolates nothing on this alone
+ *                    (D063, A1: innocent until proven guilty); it surfaces a soft
+ *                    operator caution while the innovation gate does the isolating
+ *                    if the fault also moves the accelerometer. (D061 differential
+ *                    bias observes the slow-drift case in the estimator.)
  */
 typedef struct {
     float    chi2_imu1;
@@ -213,6 +229,7 @@ typedef struct {
     bool     imu1_gate_open;
     bool     imu2_gate_open;
     bool     mag_gate_open;
+    bool     gyro_disagree;
     uint32_t imu1_stale_us;
     uint32_t imu2_stale_us;
     uint32_t mag_stale_us;
@@ -230,11 +247,22 @@ typedef struct {
  * mag_pred_ut: predicted Earth field in the body frame — the nav-frame
  * reference field rotated by the predicted orientation. Source for the mag
  * innovation residual in fdir_gate (D060). Single mag → one prediction.
+ *
+ * *_innov_var[3]: per-axis a-priori innovation variances S_k = H_k P⁻ H_kᵀ + R,
+ * exported so fdir_gate can normalise its chi-squared WITHOUT importing P or
+ * inverting an S matrix (β, D063 — amends D060). The gate forms
+ * chi2 = Σ_k (z_k − pred_k)² / innov_var_k. Driven by the live covariance, so
+ * the gate is ADAPTIVE — S grows as P grows under sensor loss, loosening the gate
+ * exactly when uncertainty rises instead of false-tripping. Both IMUs are
+ * co-located, so their accel variances are identical. (D062's no-inverse design.)
  */
 typedef struct {
     float    imu1_accel_pred_mss[3];
     float    imu2_accel_pred_mss[3];
     float    mag_pred_ut[3];
+    float    imu1_accel_innov_var[3];
+    float    imu2_accel_innov_var[3];
+    float    mag_innov_var[3];
     uint32_t timestamp_us;
 } predicted_readings_t;
 
@@ -302,6 +330,12 @@ typedef struct {
  *
  * health_flags_t is unconditionally present in every downlink frame.
  * Health state is never omitted, never optional.
+ *
+ * gate (fdir_gate_result_t) and reset_cause are downlinked too (D063 / D053
+ * A4/A6, protocol v4): the dashboard shows the live chi² / gate-open / staleness
+ * / gyro-disagree signals and the cause of the last reboot. Like health, these
+ * are never omitted — the operator must always see why a channel was isolated
+ * and whether the board came up from a watchdog/brownout fault.
  */
 typedef struct {
     uint8_t           protocol_version;
@@ -313,6 +347,8 @@ typedef struct {
     attitude_estimate_t estimate;
     actuator_cmd_t    actuators;
     health_flags_t    health;
+    fdir_gate_result_t gate;
+    reset_cause_t     reset_cause;
     system_mode_t     sys_mode;
     uint16_t          crc16;
 } telemetry_frame_t;

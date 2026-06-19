@@ -39,11 +39,14 @@ void telemetry_pack_and_send(
     const attitude_estimate_t *est,
     const actuator_cmd_t      *act,
     const health_flags_t      *health,
+    const fdir_gate_result_t  *gate,
+    reset_cause_t              reset_cause,
     system_mode_t              sys_mode
 )
 {
     /* Real implementation: build the telemetry_frame_t in a static staging
-     * struct, copy the inputs in, compute CRC, hand to sik_radio_tx_send(). */
+     * struct, copy the inputs in (incl. gate + reset_cause, protocol v4 / D063),
+     * compute CRC, hand to sik_radio_tx_send(). */
 
     /* PLACEHOLDER RETURN — NOT CONFIRMED SAFE.
      * This value has not been reviewed for correctness or safety.
@@ -57,5 +60,7 @@ void telemetry_pack_and_send(
     (void)est;
     (void)act;
     (void)health;
+    (void)gate;
+    (void)reset_cause;
     (void)sys_mode;
 }

@@ -214,6 +214,34 @@ static void cov_condition(void)
     ASSERT(s_P[8][8] >= EST_PD_FLOOR);
 }
 
+/* =====================================================================
+ * A-priori innovation variance per axis, exported for fdir_gate (β, D063 — amends
+ * D060). For a vector reference measurement the 1×9 Jacobian row of axis k is the
+ * matching row of [h]ₓ with zero gyro-bias columns (D1), so
+ *   S_k = H_k P⁻ H_kᵀ + R  reduces to the attitude-block quadratic form
+ *   Σ_{i,j<3} [h]ₓ[k][i] · P[i][j] · [h]ₓ[k][j] + R,
+ * evaluated against the just-propagated a-priori P (s_P here). FDIR then forms
+ * chi2 = Σ_k (z_k − h_k)² / S_k — NO matrix inversion, so the gate is adaptive
+ * (S grows with P under degradation) yet stays on the single-precision FPU
+ * (D062's win). [h]ₓ is rank-2, so the radial/magnitude direction carries only R
+ * while the two tangential directions carry P+R — the 2-DOF structure is implicit.
+ * ===================================================================== */
+static void innov_var(const float h[3], float r, float S_out[3])
+{
+    ASSERT(r > 0.0f);
+    float Hatt[3][3];
+    m3_skew(h, Hatt);
+    for (int k = 0; k < 3; ++k) {
+        float s = 0.0f;
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) { s += Hatt[k][i] * s_P[i][j] * Hatt[k][j]; }
+        }
+        S_out[k] = s + r;     /* quadratic form ≥ 0 (P PSD) plus r > 0 */
+    }
+    ASSERT(S_out[0] > 0.0f);  /* innovation variance strictly positive */
+    ASSERT(!isnan(S_out[2]));
+}
+
 void estimator_predict(
     const imu_reading_t  *imu1,
     const imu_reading_t  *imu2,
@@ -302,6 +330,16 @@ void estimator_predict(
         predictions_out->imu2_accel_pred_mss[i] = a_pred[i];
     }
     q_rotate_n2b(s_nom.q, b_nav, predictions_out->mag_pred_ut);
+
+    /* A-priori innovation variances for the gate (β, D063). s_P is the a-priori
+     * covariance just propagated above. Both IMUs are co-located → identical
+     * accel variance (per-IMU R is a future refinement), so compute once + copy. */
+    innov_var(a_pred, EST_R_ACC, predictions_out->imu1_accel_innov_var);
+    for (int i = 0; i < 3; ++i) {
+        predictions_out->imu2_accel_innov_var[i] = predictions_out->imu1_accel_innov_var[i];
+    }
+    innov_var(predictions_out->mag_pred_ut, EST_R_MAG, predictions_out->mag_innov_var);
+
     predictions_out->timestamp_us = h1 ? imu1->timestamp_us :
                                     (h2 ? imu2->timestamp_us : 0U);
 

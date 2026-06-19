@@ -65,9 +65,12 @@ test: $(EXES)
 clean:
 	rm -rf $(BUILD)
 
-# Branch-coverage report for the estimator. A SEPARATE instrumented build
+# Branch-coverage report per algorithm module. SEPARATE instrumented builds
 # (Apple clang source-based coverage) — the strict production build above is
 # untouched, so --coverage never pollutes -Werror. G1 bar: >= 90% branch.
+# ASSERT is neutered in the *_cov.c drivers (defensive failure arms are not
+# algorithm logic; death-tests deferred D053-A7), so the metric reflects the
+# reachable algorithm branches only.
 coverage: | $(BUILD)
 	$(CC) $(CFLAGS) -fprofile-instr-generate -fcoverage-mapping \
 	    test/estimator_cov.c $(SUPPORT) -o $(BUILD)/estimator_cov
@@ -75,5 +78,11 @@ coverage: | $(BUILD)
 	xcrun llvm-profdata merge -sparse $(BUILD)/est.profraw -o $(BUILD)/est.profdata
 	xcrun llvm-cov report $(BUILD)/estimator_cov \
 	    -instr-profile=$(BUILD)/est.profdata src/algorithm/estimator.c
+	$(CC) $(CFLAGS) -fprofile-instr-generate -fcoverage-mapping \
+	    test/fdir_cov.c $(SUPPORT) -o $(BUILD)/fdir_cov
+	cd $(BUILD) && LLVM_PROFILE_FILE=fdir.profraw ./fdir_cov >/dev/null
+	xcrun llvm-profdata merge -sparse $(BUILD)/fdir.profraw -o $(BUILD)/fdir.profdata
+	xcrun llvm-cov report $(BUILD)/fdir_cov \
+	    -instr-profile=$(BUILD)/fdir.profdata src/algorithm/fdir.c
 
 .PHONY: all test clean coverage

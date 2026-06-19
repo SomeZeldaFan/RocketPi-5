@@ -23,6 +23,9 @@
  *     version other than AVIONICS_PROTOCOL_VERSION.
  *   - health_flags_t is unconditionally present. Health state is never
  *     omitted from a downlink frame, never optional.
+ *   - fdir_gate_result_t and reset_cause are likewise unconditionally
+ *     present (protocol v4, D063 / D053 A4/A6): the dashboard always sees the
+ *     live chi²/gate/staleness/gyro-disagree signals and the last reboot cause.
  *   - timestamp_us is from TIM2 (D034).
  */
 
@@ -33,7 +36,9 @@ void telemetry_init(void);
  * dispatch via sik_radio_tx_send(). All input pointers must be non-NULL
  * — even isolated sensors produce a reading struct with an appropriate
  * status field (callers do not pass NULL for sensors here; that NULL
- * semantic applies only at the estimator boundary).
+ * semantic applies only at the estimator boundary). gate carries the FDIR
+ * innovation-gate outputs and reset_cause the classified last-reboot cause
+ * (both downlinked unconditionally, protocol v4 — D063 / D053).
  */
 void telemetry_pack_and_send(
     const imu_reading_t       *imu1,
@@ -42,6 +47,8 @@ void telemetry_pack_and_send(
     const attitude_estimate_t *est,
     const actuator_cmd_t      *act,
     const health_flags_t      *health,
+    const fdir_gate_result_t  *gate,
+    reset_cause_t              reset_cause,
     system_mode_t              sys_mode
 );
 

@@ -120,8 +120,11 @@ int main(void)
         /* [9] Actuators: clamp to mode limits, write PWM. */
         actuators_write(&cmd);
 
-        /* [10] Telemetry: pack downlink frame, CRC, queue to SiK DMA TX. */
-        telemetry_pack_and_send(&imu1, &imu2, &baro, &estimate, &cmd, &health, mode_fsm_get());
+        /* [10] Telemetry: pack downlink frame, CRC, queue to SiK DMA TX. Carries
+         *      the FDIR gate result + the classified reset cause (protocol v4,
+         *      D063 / D053 A4/A6) so the GCS surfaces chi²/health and reboot cause. */
+        telemetry_pack_and_send(&imu1, &imu2, &baro, &estimate, &cmd, &health,
+                                &gate, platform_reset_cause(), mode_fsm_get());
 
         /* [11] + [12] C2 receive and Mode FSM update. The parsed command is
          *            passed straight to mode_fsm; NULL if no frame this tick. */

@@ -669,3 +669,36 @@ The one main-loop read-modify-write that priority does **not** make safe — cle
 - Baro fused via a vertical channel — rejected; grows the state and the output contract for a quantity unobservable on a static, non-translating bench.
 - Keep `covariance[6]` — rejected; cannot represent the 9-state diagonal; a partial export hides exactly the per-IMU bias health the depth axis wants visible.
 - Build sparse-block covariance math up front — rejected; adds bug surface and hurts auditability for a speed gain we do not need.
+
+---
+
+## 2026-06-19
+
+### D063 — FDIR implementation design-lock (two-tier severity) + telemetry-contract cleanup (amends D050 / D060 / D053)
+
+**Decision:** Lock the `fdir.c` implementation (Task 3) and thread the FDIR gate output and reset cause onto the downlink.
+
+*FDIR design:*
+1. **Two-tier severity, mapped onto the two passes (D050).** `fdir_admit` runs the TIER-1 (hard) absolute checks — driver `status ≠ OK`, staleness, physical envelope / saturation, NaN/Inf, and the mag `|B|` magnitude — which isolate IMMEDIATELY and latch. `fdir_gate` runs the TIER-2 (soft) innovation checks — per-channel chi-squared and the mag dip-angle — which withhold the measurement for the tick but latch the channel only after `FDIR_DEGRADE_COUNT` consecutive failures. Per channel: `health = (NOT latched) AND (no TIER-1 fault now) AND (gate open now)`.
+2. **Latch-until-reset (no auto-recovery).** Once isolated a channel stays isolated; the latch clears ONLY via `fdir_init()` — a reset/reboot is the sole operator re-admit path (no soft re-admit command exists; future work). NaN/Inf is the non-negotiable immediate isolate (it must never reach the estimator's `!isfinite` ASSERTs).
+3. **Gyro cross-check = DETECTOR ONLY (A1, "innocent until proven guilty").** Two sensors cannot name the culprit, so an IMU1-vs-IMU2 gyro disagreement isolates neither IMU; it raises a soft operator caution (`gyro_disagree`) and leaves isolation to the innovation gate (when the fault also moves the accelerometer) and to the D061 differential-bias state (slow drift).
+4. **β innovation-variance gate (amends D060).** D050 forbids FDIR importing the estimator and gives it no covariance to invert, so `estimator_predict` exports per-axis a-priori innovation variances `S_k = H_k P⁻ H_kᵀ + R` in `predicted_readings_t`, and the gate forms `chi2 = Σ_k (z_k − ẑ_k)² / S_k`. This is ADAPTIVE (S grows with P under degradation → the gate loosens instead of false-tripping) and inversion-free (stays on the single-precision FPU, D062). The rank-2 accel/mag Jacobian makes the radial/magnitude direction carry only `R` and the two tangential directions `P+R`, so the 2-DOF structure is implicit (`CHI2_THRESHOLD_2DOF`).
+5. **Staleness reference.** `fdir_admit` is passed no clock and may not include a hardware header (layer rule), so "now" = the newest input timestamp this tick; a wholly dead bus is caught by its status field, not the timestamp arithmetic.
+6. **Scope boundary.** `fdir_admit`/`fdir_gate` own only sensor health (imu1/2, baro, mag). `actuator_healthy[]`/`radio_healthy`/`wired_healthy` are written by the separate task-5 actuator-fault path, not these passes — FDIR remains the sole writer of `health_flags_t` overall (verified by the TEST-FDR-014 grep).
+
+*Telemetry-contract cleanup (protocol v3 → v4):*
+- `fdir_gate_result_t` gains `gyro_disagree`.
+- `telemetry_frame_t` gains `fdir_gate_result_t gate` and `reset_cause_t reset_cause`: the live chi² / gate-open / staleness / gyro-disagree signals and the classified last-reboot cause (D053 A4/A6) are now downlinked unconditionally. `telemetry_pack_and_send` and the `main.c` call site are updated. `predicted_readings_t` also grew (the β fields) but is internal — not on the wire — so only the `telemetry_frame_t` change drives the **`AVIONICS_PROTOCOL_VERSION` bump 3 → 4**; the GCS parser (task 9) and the telemetry serializer must match.
+
+*Provisional constants (all carry `*** MUST BE REPLACED ***`):* `CHI2_THRESHOLD_2DOF` = 13.8 (LR-3); the physical envelopes `FDIR_ACCEL_ABS_MAX` / `GYRO_ABS_MAX` / `PRESS_MIN/MAX` (datasheet / CAL); the baro & mag staleness windows (sensor rates); `FDIR_B_EXPECTED_UT` / `B_TOL_FRAC` / `DIP_COS_EXP` / `DIP_COS_TOL` (LR-2 geomagnetic model); `FDIR_GYRO_CROSS_MAX` (LR-3 / CAL); `FDIR_DEGRADE_COUNT` = 5 (CAL). The gate noise is the estimator's own `R` (LR-2), not a separate FDIR knob.
+
+**Rationale:** The two tiers match the physics: a saturated/NaN/stale sample is *impossible*, so it earns no benefit of the doubt (immediate), while a finite-but-surprising innovation may be a transient bump, so it is debounced — spike-immunity without slowing the detection of a real hard fault. Latch-until-reset is conservative FDIR doctrine: a sensor that failed is not silently re-trusted without a human, and it eliminates health-flag flapping. The β export is the keystone — it lets FDIR run a statistically-grounded, covariance-aware gate while obeying D050 (one-way dependency, value-passing) and D062 (no matrix inversion); the adaptivity is the same "covariance is load-bearing" principle as §4.4 invariant 3, applied to detection. Surfacing `gate` + `reset_cause` is required by the depth axis (the operator must see *why* a channel was isolated and whether the board rebooted from a fault) and was the anticipated protocol bump.
+
+**Alternatives considered:**
+- Fixed per-channel gate variance `σ_gate²` instead of the exported `S` — rejected; non-adaptive (false-trips once covariance grows under degradation) and adds a third tuning knob the filter's `R` + the threshold already cover.
+- Full 3×3 `S` NIS `rᵀS⁻¹r` (textbook χ²) — rejected; reintroduces the matrix inversion D062 deliberately removed and the single-precision hazard with it. The diagonal `Σ r²/S` is calibrated by LR-3 Monte-Carlo (TEST-FDR-015) instead.
+- Auto-recovery (non-latched) — rejected; re-trusting a failed sensor without operator action, and it permits flapping.
+- Both-isolate on gyro disagreement — rejected; loses both IMUs on a single fault and breaks graceful single-channel isolation.
+- Leaky-bucket debounce (decrement on clean) — deferred; the consecutive-count is simpler, with the intermittent-fault (bad/good/bad) limitation documented in-code for a CAL revisit.
+
+**Cross-references:** `avionics/src/algorithm/fdir.c`, `inc/algorithm/fdir.h`; `estimator.c` (`innov_var` export); `inc/avionics_types.h` (`gyro_disagree`, `predicted_readings_t` β fields, `telemetry_frame_t` `gate`+`reset_cause`, `CHI2_THRESHOLD_2DOF`, protocol v4); `output/telemetry.h/.c`, `orchestration/main.c`. Tests: `test/test_fdir.c` (FDR-001…016 incl. amended 004/008/009/011, BND-001/002, severity/latch, §5 mag-disturbance, restrict-only, gyro cross-check, NULL-safety, FDR-014 grep), `test/fdir_cov.c` + Makefile `coverage`. G1: `fdir.c` 100 % branch / line / function; `estimator.c` 99.36 % branch after the β export.

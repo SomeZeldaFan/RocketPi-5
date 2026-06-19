@@ -621,13 +621,13 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Apparatus:* Dev-PC test harness.
 > *Execution log:* Not yet run.
 
-> **TEST-FDR-011 — Recovery: healthy reading restores flag**
-> *Purpose:* FDIR is not latched — a recovered sensor is re-admitted.
-> *Linked requirement(s):* `fdir.h` contract.
-> *Procedure:* Inject a fault → confirm isolation → inject clean readings for the hysteresis window.
-> *Acceptance criteria:* `imu1_healthy` returns to `true` after the hysteresis window.
-> *Apparatus:* Dev-PC test harness.
-> *Execution log:* Not yet run.
+> **TEST-FDR-011 — Recovery semantics (REFRAMED by D063: latch-until-reset)**
+> *Purpose:* Under the D063 severity model isolation is STICKY: a transient (sub-count) TIER-2 outlier withholds the measurement for the tick and then recovers on clean data, but a *latched* channel (any TIER-1 fault, or `FDIR_DEGRADE_COUNT` consecutive TIER-2 failures) does NOT auto-recover — it clears only via `fdir_init()` (a reset/reboot, the operator re-admit path).
+> *Linked requirement(s):* `fdir.h` contract, D063.
+> *Procedure:* (a) inject one TIER-2 outlier then clean data → channel recovers; (b) inject a sustained fault until latched, then clean data → channel stays isolated; (c) call `fdir_init()` → channel re-admitted.
+> *Acceptance criteria:* (a) `imu1_healthy` true again after the single spike; (b) `imu1_healthy` stays false on clean data once latched; (c) `imu1_healthy` true after `fdir_init()`.
+> *Apparatus:* Dev-PC test harness (`test_severity_latch`, `test_init_clears`).
+> *Execution log:* Run 2026-06-19 (Task 3) — PASS.
 
 > **TEST-FDR-012 — Dual IMU fault → dead reckoning path**
 > *Purpose:* Both IMUs faulted simultaneously does not crash the system.
@@ -667,7 +667,31 @@ These verify platform-layer discipline by code review and static analysis. They 
 > *Procedure:* Call `fdir_admit()` with NULL for baro.
 > *Acceptance criteria:* No crash, no assert; `baro_healthy` set to false.
 > *Apparatus:* Dev-PC test harness.
-> *Execution log:* Not yet run.
+> *Execution log:* Run 2026-06-19 (Task 3) — PASS.
+
+> **TEST-FDR-017 — Two-tier severity / debounce (D063)**
+> *Purpose:* TIER-1 (hard) faults isolate immediately; TIER-2 (soft, innovation) faults latch only after `FDIR_DEGRADE_COUNT` consecutive failures; NaN/Inf is always an immediate isolate (never reaches the estimator).
+> *Linked requirement(s):* D063, `fdir.h` contract.
+> *Procedure:* Single envelope/NaN sample (TIER-1) → immediate isolate; single innovation outlier (TIER-2) → withheld but not latched; `FDIR_DEGRADE_COUNT` consecutive outliers → latched.
+> *Acceptance criteria:* matches the tier rules above (`test_severity_latch`, `test_admit_nonfinite`).
+> *Apparatus:* Dev-PC test harness.
+> *Execution log:* Run 2026-06-19 (Task 3) — PASS.
+
+> **TEST-FDR-018 — Magnetometer disturbance detection (§5, D060/D063)**
+> *Purpose:* The single mag, with no twin, is caught two ways: the innovation gate vs the IMU-predicted field (wrong direction) and the model-free dip-angle check (wrong angle to gravity); sustained disturbance isolates the mag while the IMUs stay healthy (yaw degrades gracefully). Also the `|B|` magnitude variant in admit.
+> *Linked requirement(s):* Constraints §5, D060, D063, REQ-FDR-008.
+> *Procedure:* (a) `|B|` out of band → admit isolates; (b) in-band wrong-direction field → gate chi2 isolates; (c) `pred == meas` but field aligned with gravity → dip check isolates; exercises the IMU1→IMU2→none accel-reference fallback.
+> *Acceptance criteria:* mag isolated in each case; `imu1/2_healthy` unaffected (`test_admit_mag_magnitude`, `test_gate_mag_disturbance`).
+> *Apparatus:* Dev-PC test harness.
+> *Execution log:* Run 2026-06-19 (Task 3) — PASS.
+
+> **TEST-FDR-019 — Gyro cross-check is detector-only; restrict-only gate (A1, D063)**
+> *Purpose:* An IMU1-vs-IMU2 gyro disagreement sets `gate_out.gyro_disagree` but isolates NEITHER IMU (innocent until proven guilty); the gate is restrict-only and never re-admits a channel admit isolated.
+> *Linked requirement(s):* D063 (A1), §4.4 invariant 5, `fdir.h` contract.
+> *Procedure:* Disagreeing gyros → flag set, both IMUs healthy; admit-isolated channel fed a perfect reading through the gate → stays isolated.
+> *Acceptance criteria:* `gyro_disagree == true` with both IMUs healthy; gate never sets a health flag true (`test_gyro_crosscheck`, `test_restrict_only`).
+> *Apparatus:* Dev-PC test harness.
+> *Execution log:* Run 2026-06-19 (Task 3) — PASS.
 
 ---
 
