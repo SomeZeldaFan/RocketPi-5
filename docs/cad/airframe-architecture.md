@@ -215,6 +215,23 @@ How the model is built (tool: Onshape, parametric — the existing `aft-most.ste
 - **Track mass + CG from CAD mass properties** as the avionics load is added (top-heavy watch — informs the test-stand pivot).
 - **Design-freeze discipline** (risk register: CAD iteration creep) — freeze the joint standard after the coupon validates it, before committing full-section prints.
 
+### 9.2 Hardware schedule — published dims to lock before final-CAD
+
+"Final-CAD" here means the **nominal print target** (model to published hardware dims + a designed fit allowance), then correct after the coupon if a fit is tight/wrong. Before that, capture each item's published dimensions:
+
+| Item | Published dims to capture | Drives (CAD features) |
+|---|---|---|
+| **M3 screws** (amazon.ae) | nominal Ø, head Ø, head height, length-under-head, thread length | thin-flange clearance hole (J4), screw length (no bottoming), head clearance |
+| **Heat-set inserts** (M3) | recommended pilot Ø, insert length, insert OD (max knurl) | Stage-1 pilot Ø + depth, Stage-2 Ø (must be **< insert OD**) — §5.2 |
+| **Insert soldering tips** | tip size matched to the insert (M3) | install only (not a CAD dim) — must match the purchased insert |
+| **Dowel pins** (fin locking) | nominal Ø, length, tolerance class | dowel-hole Ø + fit allowance, engagement depth, fin-root dowel pattern |
+
+Dowels sit at the aft fins, far from the nose-end magnetometer, so steel dowels there are magnetically fine. Once these are in and the fit-allowance variables are set, export a STEP and run `tools/step_audit.py` to check the fit-stack against this schedule and §3 (nominal/design-intent check), then coupon-print to validate the as-printed tolerance.
+
+### 9.3 STEP audit tool
+
+`tools/step_audit.py` (pure stdlib) extracts nominal geometry from a STEP export — cylinder radii → diameters, hole patterns (count, pitch radius, angles, **rotational-symmetry order**), and bounding box — to diff against §3 and the §9.2 schedule. It validates **design intent / fit-stack math** (e.g. clocking pattern asymmetry = symmetry order 1, mating-pattern match, insert-can't-fall-through), **not** as-printed FDM tolerance (that's the coupon). Run: `python3 tools/step_audit.py <file.step>`.
+
 ---
 
 ## 10. Accepted Limitations / Scope Notes
@@ -231,6 +248,7 @@ How the model is built (tool: Onshape, parametric — the existing `aft-most.ste
 - `docs/05-architecture.md` §3 — airframe structural architecture (summarised; points here).
 - `docs/03-decisions-log.md` — D055, D056, D057, D058, D059 (and D030, D031, D033, D044).
 - `docs/04-requirements.md` — REQ-SYS-005/013, REQ-CTL-001/002/003/004/005/006, REQ-FDR-001/007/009, REQ-PWR-004, REQ-GCS-005.
+- `tools/step_audit.py` — nominal-geometry / fit-stack audit of STEP exports (§9.2, §9.3).
 
 ---
 
