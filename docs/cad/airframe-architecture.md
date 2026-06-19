@@ -1,7 +1,7 @@
 # Airframe Design — Comprehensive Reference (Head to Tail)
 
 **Status:** Primary airframe design document. This is the single authoritative, words-only description of the RocketPi-5 airframe — geometry, joints, datums, avionics housing, control surfaces, power/cabling, and fabrication. If the CAD and this document disagree, the discrepancy is a defect to be resolved, not a silent CAD win.
-**Last updated:** 2026-06-17.
+**Last updated:** 2026-06-18.
 **Units:** millimetres unless stated.
 **Governing decisions:** D031 (custom semi-monocoque airframe), D044 (metal reinforcements in scope), **D055** (segmentation + section-joint standard), **D056** (control surfaces: static aft fins + actuated canards), **D057** (avionics capsule + dedicated servo rail), **D058** (stringers removed, wall thinned to 6 mm), **D059** (control surfaces are visual/commanded-response only on the static bench).
 **Companion note:** `docs/cad/aft-most-section.md` carries the parametric insert/clamp formulas and the original STEP read-out; this document is the airframe-level reference and points there rather than duplicating the formulas. (That note predates D058 — its OD/wall and stringer figures are superseded here.)
@@ -69,7 +69,7 @@ Locked values are stated; provisional values are marked **(prov.)** and resolved
 | J7 | Thick-flange boss depth (lower) | 15 mm | For boss strength; **not** the insert length |
 | D-AX | **Axial datum** | flange face | Thin-flange face seats on thick-flange face |
 | D-CLAMP | **Clamp + bending** | the 8 bolts | Clamp the joint and react the (small) bench bending moment |
-| D-RAD | **Radial / clocking** | flange face + bolts (loose) | No precise radial datum at present; a centring spigot is an exploratory option (§12.2). Seam steps accepted and finished under paint. |
+| D-RAD | **Radial / clocking** | flange face + bolts (loose) today; flange-tab datum is the agreed direction | No precise datum locked yet. Agreed direction: flange-integrated asymmetric locating tabs between the bolts (one tight tab centres + clocks, extras foolproof), bore kept clean — §12.2. Round spigot kept as the higher-precision alternative. Seam steps accepted, finished under paint. |
 
 ---
 
@@ -83,7 +83,7 @@ The 12 mm wall of the original design was driven partly by embedding aluminium s
 
 ## 5. Section-to-Section Joint Standard
 
-The joint uses two features: the **flange faces** set axial position, and the **8 bolts** clamp the joint and react its (small) bending moment. There are no stringers (D058). Radial centring is currently loose (flange face + bolt clearance); a centring spigot is an exploratory option (§12.2), and seam steps are accepted because the skin is painted.
+The joint uses two features: the **flange faces** set axial position, and the **8 bolts** clamp the joint and react its (small) bending moment. There are no stringers (D058). Radial centring + clocking is loose today (flange face + bolt clearance); the agreed direction is **flange-integrated asymmetric locating tabs between the bolts** (one tight tab centres + clocks, extras foolproof; geometry not yet locked — §12.2), with a round centring spigot kept as the higher-precision alternative. Seam steps are accepted because the skin is painted.
 
 Orientation convention: viewing the rocket nose-up, the **lower** section (section A) presents a **thick flange** at its top; the **upper** section (section B) presents a **thin flange** at its bottom. Screws are driven downward from inside section B, through the thin-flange clearance holes, into heat-set inserts seated in section A's thick flange.
 
@@ -160,9 +160,11 @@ Per-type rules (the caddy is not one-size-fits-all):
 - **Battery (LiPo) — special case.** No rigid compression; a swelling pouch in a hard box is a puncture/fire path. Looser cradle with **swelling clearance, venting, no sharp/screw features against the pouch, easy removal/disconnect.**
 - **Thermal.** PLA softens ~50–60 °C. Vent the warm parts — **power regulators, radio on TX, battery.** The MCU itself is low-power.
 - **IMUs — rigid + precisely aligned.** The estimator assumes a fixed, known sensor-to-body transform, so IMU caddies are tight, rigid, axes deliberately aligned, with the two IMUs in a known relative orientation. Compliant capture is fine for the battery, not for these.
-- **Magnetometer — magnetically clean.** Keep the BMM150 away from power cables and **steel fasteners** (use brass/nylon hardware nearby; route power away). Ties to RISK-001 and to the §5 magnetic-disturbance failure mode (clean nominally; disturbed deliberately for the demo).
+- **Magnetometer — magnetically clean (placement is CAD-relevant).** Put the BMM150 at the **far / nose end** of the bay, using the cylinder's axial length to separate it from the battery and the servo-power cabling (its own I2C bus is just two signal wires, so routing it far is cheap). Use **brass/nylon (non-magnetic) fasteners** near it, and route power away / as twisted pairs. (Reframe for later: *fixed* metal can be calibrated out — the real disturbance is *time-varying* servo current; full calibrate-and-characterise strategy deferred.) Ties to RISK-001 and to the §5 magnetic-disturbance failure mode (clean nominally; disturbed deliberately for the demo).
 
 Also: preserve **connector access** for the parts you actually plug into (MCU USB/SWD for flashing, servo headers, battery plug) so the clamshell doesn't bury them; add a **crush rib or TPU/foam pad** so the fit is snug-not-stressed and vibration-damped; and model **reliefs for tall parts / pin headers**, not just an L×W×H box.
+
+**Bay occupants & power distribution.** Besides the component caddies, the bay carries a permanent **power-distribution / regulator board** (Rail A 3.3 V + Rail B 5 V, per D033) as its own mounted board/caddy — this is the permanent home of the shared rails (the source feeds a bus; every device taps it). The **breadboard is a bench bring-up tool only and is never installed in the airframe**: Dupont-on-breadboard is for desk validation of each sensor, after which the proven wiring is rebuilt permanently (soldered / crimped-connectorised) in the bay. Allocate caddy space + a mount for the power board in the bay layout.
 
 To think about in the avionics pass: the standard caddy→capsule interface (footprint vs. rail/dovetail vs. insert grid), capsule volume budget, mag/cable routing layout, and which caddies need frequent-access (battery, MCU) vs. set-and-forget.
 
@@ -198,6 +200,20 @@ Cable routing from the capsule to the canard servos and to the servo rail crosse
 - **Coupon-before-commit (strongly recommended, and consistent with architecture §3.8 and Constraints §10.7).** Before committing a 280 mm section, print a **single-joint test coupon**: two short flange rings carrying the full 8-bolt + stepped-insert geometry, at the 6 mm wall. ~1 h of printing validates insert seat depth, clamp behaviour, and skin denting. This protects the end-of-month deadline far more than it costs.
 - **Cosmetic finishing is in scope.** Primer + paint + decal (e.g. an armed-forces logo) are cosmetic only; they are **not** the structural "chemical coating" excluded by Constraints §4 (that exclusion targets resin/fibreglass structural reinforcement). Seam steps at joints are filled/sanded under primer.
 - **Filament/print-time reality (improved).** Thinning the wall 12 → 6 mm and reducing OD 174 → 162 cuts wall volume by well over half, and the minimal first stack is only a few sections — a large improvement on the original mass/print/cost picture (risk R-AF-03).
+
+### 9.1 CAD modelling methodology
+
+How the model is built (tool: Onshape, parametric — the existing `aft-most.step` was an Onshape export):
+
+- **Parametric, master-parameter-driven.** The §3 table values become **named variables** (section length, OD, bore, wall, flange width, bolt PR/count, fit clearances) so a change propagates instead of being re-drawn. FDM fit allowances (insert pilot, tab/pocket clearance, bolt clearance, slip fits) are variables, *tuned on the coupon then locked*.
+- **One canonical section as a base part.** Model a single section (shell + flange + bolt ring + joint mating features) once; the avionics / empty / aft-most sections are **derived variants/configurations** of it (add service panels, fin roots, canard/servo mounts), not re-modelled from scratch.
+- **The joint modelled once, on the section's mating faces** (top = male flange + locating tabs; bottom = female flange + pockets) so **every section mates with every other** — this *is* the uniform joint standard (D055). Single source of truth; never re-draw the joint per section.
+- **Coupon-first.** Model + print the single-joint coupon, measure with the caliper, **tune the fit-clearance variables**, *then* propagate the validated numbers into the full sections. Caliper-in-the-loop, not one-shot.
+- **Components → caddies, measurement-driven.** Caliper each board into a parametric **envelope solid** (measured L×W×H + reliefs for tall parts / pin headers / connectors); generate the caddy around the envelope (oversized cavity + clamshell split + the standard mounting footprint + cable holes). Templated so the ~7 components reuse one caddy generator.
+- **Top-down skeleton/layout.** A master layout (rocket centreline, section stack positions, canard/fin body stations, avionics-bay envelope, CG target) that the sections and caddies reference, so body stations and mounts stay coordinated.
+- **Design-for-FDM baked in.** Thin shell + local bosses; fillet stress risers (tab/pocket corners); chamfer/lead-in on every mating feature; print-orientation-aware feature placement (bolt holes vs. layer direction); split at the ~300 mm build-volume (the 280 mm section *is* that split).
+- **Track mass + CG from CAD mass properties** as the avionics load is added (top-heavy watch — informs the test-stand pivot).
+- **Design-freeze discipline** (risk register: CAD iteration creep) — freeze the joint standard after the coupon validates it, before committing full-section prints.
 
 ---
 
@@ -247,3 +263,4 @@ These do not block printing the cylindrical sections (the section + joint geomet
 - **2026-06-17 (a)** — Document created. Section/joint geometry, stepped-insert depth solution, stringer datum scheme, avionics capsule, static-fin + canard control architecture, power/cabling, and fabrication plan captured. Decisions D055–D057 logged. Canard requirements re-pointed.
 - **2026-06-17 (b)** — D058: aluminium stringers removed (8-bolt flange carries bench loads with ample margin); skin wall thinned 12 → 6 mm with bore 150 preserved (OD 174 → 162); centring spigot demoted to an exploratory TODO (§12.2). D059: control surfaces are visual/commanded-response only on the static bench; REQ-CTL-001/006 reworded. First article set to a minimal stack (avionics / one empty section / aft-most / cosmetic motor mount), extend later.
 - **2026-06-17 (c)** — Directions captured (not locked, depth deferred): §12.2 section clocking + centring via flange-integrated asymmetric locating tabs between the bolts (one tight tab centres + clocks, extras foolproof, bore kept clean; round spigot kept as the higher-precision alternative); §6.1 per-component clamshell caddies with a standardised caddy→capsule interface and per-type rules (battery swelling/venting, IMU rigid+aligned, magnetometer clean, thermal venting, connector access).
+- **2026-06-18 (d)** — Audit + gap-fill: added §9.1 CAD modelling methodology (parametric master model, one canonical section + derived variants, joint modelled once on the mating faces, coupon-first fit-tuning, caliper-driven caddy generation, top-down skeleton, design-for-FDM, mass/CG tracking, design-freeze). §6.1: magnetometer **axial** placement (far/nose end, twisted pairs, non-magnetic fasteners) and the permanent power-distribution/regulator board as a bay occupant (breadboard is bench-only, never installed). §3/§5 clocking rows reconciled to the flange-tab direction. No design changes — documentation only.
